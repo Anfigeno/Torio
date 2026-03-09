@@ -18,4 +18,33 @@ export namespace Funci {
 
 		return Object.assign(obtenerValor, { tubo });
 	}
+
+	export type Resultado<T> =
+		| {
+				ok: true;
+				valor: T;
+		  }
+		| {
+				ok: false;
+				error: Error;
+		  };
+
+	export function exito<T>(valor: T): Resultado<T> {
+		return { ok: true, valor };
+	}
+
+	export function fallo<T>(error: Error): Resultado<T> {
+		return { ok: false, error };
+	}
+
+	export async function atrapar<T>(
+		funcionAsincronaQuePuedeFallar: () => Promise<T>,
+	): Promise<Resultado<T>> {
+		try {
+			const datos = await funcionAsincronaQuePuedeFallar();
+			return exito(datos);
+		} catch (e) {
+			return fallo(e as Error);
+		}
+	}
 }
