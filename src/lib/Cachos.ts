@@ -1,5 +1,7 @@
 import { Funci } from "./Funci";
 
+class ValorNoInicializado extends Error {}
+
 export default class Cachos<T> {
 	private _valor: T | null = null;
 	private actualizar: null | (() => Promise<Funci.Resultado<T>>) = null;
@@ -16,8 +18,9 @@ export default class Cachos<T> {
 		this.intervalo = intervalo;
 	}
 
-	public get valor(): T | null {
-		return this._valor;
+	public obtenerValor(): Funci.Resultado<T> {
+		if (this._valor === null) return Funci.fallo(new ValorNoInicializado());
+		return Funci.exito(this._valor);
 	}
 
 	public establecerActualizador(actualizador: () => Promise<Funci.Resultado<T>>) {

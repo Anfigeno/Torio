@@ -1,4 +1,9 @@
 const ConfiguracionDeDiscord = {
+	marca: {
+		componentes: {
+			urlDeEspaciador: "https://i.postimg.cc/q7bKpt5N/expansor.png",
+		},
+	},
 	canales: {
 		moderacion: {
 			registros: {
