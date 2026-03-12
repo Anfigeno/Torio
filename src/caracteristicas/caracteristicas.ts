@@ -5,6 +5,7 @@ import establecerCaracteristicaPreparado from "./preparado";
 import establecerCaracteristicaRegistrosDeCanalesDeTexto from "./registrosDeDiscord/registrosDeCanalesDeTexto";
 import establecerCaracteristicaDeRegistrosDeCanalesDeVoz from "./registrosDeDiscord/registrosDeCanalesDeVoz";
 import establecerCaracteristicaSaludo from "./saludo";
+import establecerCaracteristicaDeRegistrosDeServidor from "./registrosDeDiscord/registrosDeServidor";
 
 export default function establecerCaracteristicas(cliente: Client) {
 	Funci.pipa(cliente).tubo(
@@ -13,5 +14,6 @@ export default function establecerCaracteristicas(cliente: Client) {
 		establecerCaracteristicaSaludo,
 		establecerCaracteristicaRegistrosDeCanalesDeTexto,
 		establecerCaracteristicaDeRegistrosDeCanalesDeVoz,
+		establecerCaracteristicaDeRegistrosDeServidor,
 	);
 }

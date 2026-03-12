@@ -47,4 +47,14 @@ export namespace Funci {
 			return fallo(e as Error);
 		}
 	}
+
+	export namespace Objeto {
+		type Entradas<T> = {
+			[K in keyof T]: [K, T[K]];
+		}[keyof T][];
+
+		export function entradas<T extends object>(objeto: T): Entradas<T> {
+			return Object.entries(objeto) as Entradas<T>;
+		}
+	}
 }
