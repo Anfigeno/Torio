@@ -3,156 +3,95 @@ import {
 	ContainerBuilder,
 	codeBlock,
 	Events,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
 	type Message,
 	type MessageReaction,
 	type OmitPartialGroupDMChannel,
 	type PartialMessage,
 	type PartialMessageReaction,
 	type PartialUser,
-	SectionBuilder,
-	SeparatorBuilder,
-	type TextBasedChannel,
 	TextDisplayBuilder,
-	ThumbnailBuilder,
 	type User,
 } from "discord.js";
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
-import ConfiguracionDeDiscord from "@/configuracion/Discord";
 import { enviarRegistro } from "./util";
 
 export default function establecerCaracteristicaRegistrosDeCanalesDeTexto(
 	cliente: Client,
 ): void {
-	cliente.on(Events.MessageUpdate, registrarMensajeActualizado);
+	cliente.on(Events.MessageUpdate, registrarMensajeEditado);
 	cliente.on(Events.MessageDelete, registrarMensajeEliminado);
 	cliente.on(Events.MessageReactionAdd, registrarReaccionAñadida);
 	cliente.on(Events.MessageReactionRemove, registrarReaccionEliminada);
 }
 
-function registrarMensajeActualizado(
+function registrarMensajeEditado(
 	mensajeAntiguo: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
 	nuevoMensaje: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
 ) {
-	const titulo = "Mensaje actualizado";
-	const resumen = crearResumen(
-		new Dato("Contenido anterior", mensajeAntiguo.content),
-		new Dato("Nuevo contenido", nuevoMensaje.content),
+	if (!mensajeAntiguo.content || !nuevoMensaje.content) return;
+	if (mensajeAntiguo.content === nuevoMensaje.content) return;
+
+	const usuario = mensajeAntiguo.member?.user || nuevoMensaje.member?.user;
+
+	const resumen = new ContainerBuilder().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`
+${usuario} editó su mensaje de contenido:
+${codeBlock(mensajeAntiguo.content)}
+a:
+${codeBlock(nuevoMensaje.content)}
+en el canal ${nuevoMensaje.channel}. [Clic aquí para ver](${nuevoMensaje.url})
+`),
 	);
 
-	const componente = crearComponenteDeRegistro(
-		titulo,
-		resumen,
-		nuevoMensaje.author,
-		nuevoMensaje.channel,
-		nuevoMensaje.url,
-	);
-
-	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
+	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarMensajeEliminado(
 	mensaje: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
 ) {
-	const titulo = "Mensaje eliminado";
-	const resumen = crearResumen(new Dato("Contenido", mensaje.content));
+	if (!mensaje.content) return;
 
-	const componente = crearComponenteDeRegistro(
-		titulo,
-		resumen,
-		mensaje.author,
-		mensaje.channel,
+	const resumen = new ContainerBuilder().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`
+${mensaje.member?.user} eliminó su mensaje de contenido:
+${codeBlock(mensaje.content)}
+en el canal ${mensaje.channel}. [Clic aquí para ver](${mensaje.url})
+`),
 	);
 
-	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
+	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarReaccionAñadida(
 	{ emoji, message: mensaje }: MessageReaction | PartialMessageReaction,
 	usuario: User | PartialUser,
 ) {
-	const titulo = "Reacción añadida";
-	const resumen = crearResumen(
-		new Dato("Reaccion", emoji.toString(), []),
-		new Dato("Al mensaje de contenido", mensaje.content),
+	if (!mensaje.content) return;
+
+	const resumen = new ContainerBuilder().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(
+			`${usuario} añadio la reacción ${emoji} al mensaje de contenido:
+${codeBlock(mensaje.content)}
+en el canal ${mensaje.channel}. [Clic aquí para ver](${mensaje.url})`,
+		),
 	);
 
-	const componente = crearComponenteDeRegistro(
-		titulo,
-		resumen,
-		usuario,
-		mensaje.channel,
-		mensaje.url,
-	);
-
-	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
+	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarReaccionEliminada(
 	{ emoji, message: mensaje }: MessageReaction | PartialMessageReaction,
 	usuario: User | PartialUser,
 ) {
-	const titulo = "Reacción eliminada";
-	const resumen = crearResumen(
-		new Dato("Reaccion", emoji.toString(), []),
-		new Dato("Al mensaje de contenido", mensaje.content),
-	);
+	if (!mensaje.content) return;
 
-	const componente = crearComponenteDeRegistro(
-		titulo,
-		resumen,
-		usuario,
-		mensaje.channel,
-		mensaje.url,
-	);
-
-	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
-}
-
-class Dato {
-	constructor(
-		public clave: string,
-		public valor: string | null | undefined,
-		public procesadores: ((valor: string) => string)[] = [codeBlock],
-	) {}
-
-	toString(): string {
-		return `**${this.clave}:**\n${this.valor ? this.procesadores.reduce((acc, procesador) => procesador(acc), this.valor) : "No se pudo leer el contenido"}`;
-	}
-}
-
-function crearResumen(...datos: Dato[]): string {
-	return datos.map((dato) => dato.toString()).join("\n");
-}
-
-function crearComponenteDeRegistro(
-	titulo: string,
-	contenido: string,
-	autor: User | PartialUser | null,
-	canal: TextBasedChannel,
-	urlDelMensaje?: string,
-): ContainerBuilder {
-	return new ContainerBuilder()
-		.addTextDisplayComponents(new TextDisplayBuilder().setContent(`### ${titulo}`))
-		.addSeparatorComponents(new SeparatorBuilder())
-		.addSectionComponents(
-			new SectionBuilder()
-				.addTextDisplayComponents(new TextDisplayBuilder().setContent(contenido))
-				.setThumbnailAccessory(
-					new ThumbnailBuilder().setURL(autor?.displayAvatarURL() || ""),
-				),
-		)
-		.addMediaGalleryComponents(
-			new MediaGalleryBuilder().addItems(
-				new MediaGalleryItemBuilder().setURL(
-					ConfiguracionDeDiscord.marca.componentes.urlDeEspaciador,
-				),
-			),
-		)
-		.addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(`
--# Por ${autor}, en ${canal}.${urlDelMensaje ? `  -  [Click aquí para ver el mensaje](${urlDelMensaje})` : ""}
+	const resumen = new ContainerBuilder().addTextDisplayComponents(
+		new TextDisplayBuilder().setContent(`
+${usuario} eliminó su reacción ${emoji} del mensaje de contenido:
+${codeBlock(mensaje.content)}
+en el canal ${mensaje.channel}.
 `),
-		);
+	);
+
+	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
 }
