@@ -20,8 +20,7 @@ import {
 } from "discord.js";
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
 import ConfiguracionDeDiscord from "@/configuracion/Discord";
-import registro from "@/configuracion/registro";
-import { Funci } from "@/lib/Funci";
+import { enviarRegistro } from "./util";
 
 export default function establecerCaracteristicaRegistrosDeCanalesDeTexto(
 	cliente: Client,
@@ -50,7 +49,7 @@ function registrarMensajeActualizado(
 		nuevoMensaje.url,
 	);
 
-	enviarRegistro(componente);
+	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarMensajeEliminado(
@@ -66,7 +65,7 @@ function registrarMensajeEliminado(
 		mensaje.channel,
 	);
 
-	enviarRegistro(componente);
+	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarReaccionAñadida(
@@ -87,7 +86,7 @@ function registrarReaccionAñadida(
 		mensaje.url,
 	);
 
-	enviarRegistro(componente);
+	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
 }
 
 function registrarReaccionEliminada(
@@ -108,7 +107,7 @@ function registrarReaccionEliminada(
 		mensaje.url,
 	);
 
-	enviarRegistro(componente);
+	enviarRegistro(componente, canalDeRegistrosDeCanalesDeTexto);
 }
 
 class Dato {
@@ -156,24 +155,4 @@ function crearComponenteDeRegistro(
 -# Por ${autor}, en ${canal}.${urlDelMensaje ? `  -  [Click aquí para ver el mensaje](${urlDelMensaje})` : ""}
 `),
 		);
-}
-
-async function enviarRegistro(componenteDeRegistro: ContainerBuilder) {
-	const resultadoA = canalDeRegistrosDeCanalesDeTexto.obtenerValor();
-	if (!resultadoA.ok) {
-		registro.error(resultadoA.error);
-		return;
-	}
-
-	const canalDeRegistros = resultadoA.valor;
-
-	const resultadoB = await Funci.atrapar(() =>
-		canalDeRegistros.send({
-			flags: ["IsComponentsV2"],
-			components: [componenteDeRegistro],
-			allowedMentions: { users: [] },
-		}),
-	);
-
-	if (!resultadoB.ok) registro.error(resultadoB.error);
 }

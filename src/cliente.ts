@@ -8,6 +8,7 @@ const cliente = new Client({
 		g.MessageContent,
 		g.GuildMessages,
 		g.GuildMessageReactions,
+		g.GuildVoiceStates,
 	]),
 });
 
