@@ -1,19 +1,13 @@
-import ConfiguracionDeDiscord from "@/configuracion/Discord";
-import registro from "@/configuracion/registro";
-import { Funci } from "@/lib/Funci";
 import {
+	type Client,
 	ContainerBuilder,
 	Events,
-	MediaGalleryBuilder,
-	MediaGalleryItemBuilder,
-	SectionBuilder,
 	TextDisplayBuilder,
-	ThumbnailBuilder,
 	type VoiceState,
-	type Client,
 } from "discord.js";
-import { enviarRegistro } from "./util";
 import { canalDeRegistrosDeCanalesDeVoz } from "@/caches";
+import registro from "@/configuracion/registro";
+import { enviarRegistro } from "./util";
 
 export default function establecerCaracteristicaDeRegistrosDeCanalesDeVoz(
 	cliente: Client,
