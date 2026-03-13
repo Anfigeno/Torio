@@ -19,32 +19,35 @@ export namespace Funci {
 		return Object.assign(obtenerValor, { tubo });
 	}
 
-	export type Resultado<T> =
+	export type Resultado<T, K extends Error> =
 		| {
 				ok: true;
 				valor: T;
+				error: null;
 		  }
 		| {
 				ok: false;
-				error: Error;
+				valor: null;
+				error: K;
 		  };
 
-	export function exito<T>(valor: T): Resultado<T> {
-		return { ok: true, valor };
+	export function exito<T>(valor: T): Resultado<T, never> {
+		return { ok: true, valor, error: null };
 	}
 
-	export function fallo<T>(error: Error): Resultado<T> {
-		return { ok: false, error };
+	export function fallo<K extends Error>(error: K): Resultado<never, K> {
+		return { ok: false, valor: null, error };
 	}
 
-	export async function atrapar<T>(
-		funcionAsincronaQuePuedeFallar: () => Promise<T>,
-	): Promise<Resultado<T>> {
+	export async function intentar<T, K extends Error>(cfg: {
+		accion: () => Promise<T>;
+		atrapar: (error: unknown) => K;
+	}): Promise<Resultado<T, K>> {
 		try {
-			const datos = await funcionAsincronaQuePuedeFallar();
+			const datos = await cfg.accion();
 			return exito(datos);
 		} catch (e) {
-			return fallo(e as Error);
+			return fallo(cfg.atrapar(e));
 		}
 	}
 

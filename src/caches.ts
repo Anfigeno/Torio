@@ -16,49 +16,56 @@ export class ErrorAlObtenerCanal extends Error {
 }
 
 const crearCacheDeCanalDeTexto = (id: string, nombre: string) =>
-	Funci.con(new Cachos<GuildTextBasedChannel>(1000 * 60 * 5), (c) => {
-		c.enActualizacion(() => registro.info(`Actualizando cache del canal "${nombre}"`));
+	Funci.con(
+		new Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>(1000 * 60 * 5),
+		(c) => {
+			c.enActualizacion(() => registro.info(`Actualizando cache del canal "${nombre}"`));
 
-		c.enFallo((error) => registro.error(error));
+			c.enFallo((error) => registro.error(error));
 
-		c.establecerActualizador(async () => {
-			const resultado = await Funci.atrapar(() => cliente.channels.fetch(id));
+			c.establecerActualizador(async () => {
+				const {
+					ok: seObtuvoElCanal,
+					valor: canal,
+					error,
+				} = await Funci.intentar({
+					accion: () => cliente.channels.fetch(id),
+					atrapar: (e) =>
+						new ErrorAlObtenerCanal(`No se pudo obtener el canal [${nombre}]`, e),
+				});
 
-			if (!resultado.ok)
-				return Funci.fallo(
-					new ErrorAlObtenerCanal(
-						`No se pudo obtener el canal [${nombre}]`,
-						resultado.error,
-					),
-				);
+				if (!seObtuvoElCanal) return Funci.fallo(error);
 
-			const canal = resultado.valor;
+				if (!canal)
+					return Funci.fallo(
+						new ErrorAlObtenerCanal(
+							`El canal [${nombre}] no existe o no se pudo obtener`,
+						),
+					);
 
-			if (!canal)
-				return Funci.fallo(
-					new ErrorAlObtenerCanal(`El canal [${nombre}] no existe o no se pudo obtener`),
-				);
+				if (!canal.isTextBased())
+					return Funci.fallo(
+						new ErrorAlObtenerCanal(`El canal [${nombre}] no es un canal de texto`),
+					);
 
-			if (!canal.isTextBased())
-				return Funci.fallo(
-					new ErrorAlObtenerCanal(`El canal [${nombre}] no es un canal de texto`),
-				);
+				if (canal.isDMBased())
+					return Funci.fallo(
+						new ErrorAlObtenerCanal(`El canal [${nombre}] no es un canal de servidor`),
+					);
 
-			if (canal.isDMBased())
-				return Funci.fallo(
-					new ErrorAlObtenerCanal(`El canal [${nombre}] no es un canal de servidor`),
-				);
+				if (!canal.isSendable())
+					Funci.fallo(
+						new ErrorAlObtenerCanal(
+							`No se pueden enviar mensajes en el canal [${nombre}]`,
+						),
+					);
 
-			if (!canal.isSendable())
-				Funci.fallo(
-					new ErrorAlObtenerCanal(`No se pueden enviar mensajes en el canal [${nombre}]`),
-				);
+				return Funci.exito(canal);
+			});
 
-			return Funci.exito(canal);
-		});
-
-		return c;
-	});
+			return c;
+		},
+	);
 
 export const canalDeRegistrosDeCanalesDeTexto = crearCacheDeCanalDeTexto(
 	ConfiguracionDeDiscord.canales.moderacion.registros.canalesDeTexto,

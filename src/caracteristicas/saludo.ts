@@ -1,5 +1,6 @@
 import type { Client, Message } from "discord.js";
 import registro from "@/configuracion/registro";
+import { Funci } from "@/lib/Funci";
 
 const SALUDOS = ["Hola", "ola", "oa"];
 const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
@@ -18,5 +19,18 @@ async function contestarSaludo(mensaje: Message) {
 	const saludo = RESPUESTAS_A_SALUDOS[
 		Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)
 	] as string;
-	await mensaje.reply(saludo);
+
+	const { ok: seEnvioElMensaje, error } = await Funci.intentar({
+		accion: () => mensaje.reply(saludo),
+		atrapar: (e) => new ErrorAlContestarSaludo(e),
+	});
+
+	if (!seEnvioElMensaje) registro.error(error);
+}
+
+class ErrorAlContestarSaludo extends Error {
+	constructor(public readonly errorBase?: unknown) {
+		super();
+		this.name = "ErrorAlContestarSaludo";
+	}
 }

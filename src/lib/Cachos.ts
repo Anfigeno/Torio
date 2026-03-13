@@ -1,10 +1,8 @@
 import { Funci } from "./Funci";
 
-class ValorNoInicializado extends Error {}
-
-export default class Cachos<T> {
+export default class Cachos<T, K extends Error> {
 	private _valor: T | null = null;
-	private actualizar: null | (() => Promise<Funci.Resultado<T>>) = null;
+	private actualizar: null | (() => Promise<Funci.Resultado<T, K>>) = null;
 	private intervalo: number;
 	private temporizador: NodeJS.Timeout | null = null;
 	private alFallar?: (error: Error, ctx: this) => void;
@@ -18,12 +16,12 @@ export default class Cachos<T> {
 		this.intervalo = intervalo;
 	}
 
-	public obtenerValor(): Funci.Resultado<T> {
+	public obtenerValor(): Funci.Resultado<T, ValorNoInicializado> {
 		if (this._valor === null) return Funci.fallo(new ValorNoInicializado());
 		return Funci.exito(this._valor);
 	}
 
-	public establecerActualizador(actualizador: () => Promise<Funci.Resultado<T>>) {
+	public establecerActualizador(actualizador: () => Promise<Funci.Resultado<T, K>>) {
 		this.actualizar = actualizador;
 	}
 
@@ -35,7 +33,7 @@ export default class Cachos<T> {
 		this.alActualizar = fn;
 	}
 
-	public iniciar(): Funci.Resultado<null> {
+	public iniciar(): Funci.Resultado<null, ErrorAlIniciarElTemporizador> {
 		if (this.actualizar === null)
 			return Funci.fallo(
 				new ErrorAlIniciarElTemporizador("El actualizador no ha sido establecido"),
@@ -53,21 +51,22 @@ export default class Cachos<T> {
 	}
 
 	private async ejecutarActualizacion(
-		actualizador: () => Promise<Funci.Resultado<T>>,
+		actualizador: () => Promise<Funci.Resultado<T, ActualizacionFallida>>,
 	): Promise<void> {
 		const alActualizar = this.alActualizar || (() => null);
 		alActualizar(this);
 
-		const resultado = await actualizador();
-		if (!resultado.ok) {
-			if (this.alFallar !== undefined) this.alFallar(resultado.error, this);
+		const { ok: actualizacionExitosa, valor, error } = await actualizador();
+
+		if (!actualizacionExitosa) {
+			if (this.alFallar !== undefined) this.alFallar(error, this);
 			return;
 		}
 
-		this._valor = resultado.valor;
+		this._valor = valor;
 	}
 
-	public detener(): Funci.Resultado<null> {
+	public detener(): Funci.Resultado<null, ErrorAlDetenerElTemporizador> {
 		if (this.temporizador === null)
 			return Funci.fallo(
 				new ErrorAlDetenerElTemporizador("El temporizador no ha sido iniciado"),
@@ -96,5 +95,25 @@ export class ErrorAlDetenerElTemporizador extends Error {
 	) {
 		super(mensaje);
 		this.name = "ErrorAlDetenerElTemporizador";
+	}
+}
+
+export class ActualizacionFallida extends Error {
+	constructor(
+		mensaje?: string,
+		public readonly errorBase?: unknown,
+	) {
+		super(mensaje);
+		this.name = "ActualizacionFallida";
+	}
+}
+
+class ValorNoInicializado extends Error {
+	constructor(
+		mensaje?: string,
+		public readonly errorBase?: unknown,
+	) {
+		super(mensaje);
+		this.name = "ValorNoInicializado";
 	}
 }
