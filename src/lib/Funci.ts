@@ -60,4 +60,15 @@ export namespace Funci {
 			return Object.entries(objeto) as Entradas<T>;
 		}
 	}
+
+	export class ErrorBase extends Error {
+		public readonly errorBase: unknown;
+
+		constructor(cfg: { mensaje?: string; errorBase?: unknown }) {
+			super(cfg.mensaje);
+
+			this.errorBase = cfg.errorBase;
+			this.name = this.constructor.name;
+		}
+	}
 }

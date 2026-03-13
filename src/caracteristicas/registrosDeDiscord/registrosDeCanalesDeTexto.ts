@@ -1,6 +1,5 @@
 import {
 	type Client,
-	ContainerBuilder,
 	codeBlock,
 	Events,
 	type Message,
@@ -9,89 +8,144 @@ import {
 	type PartialMessage,
 	type PartialMessageReaction,
 	type PartialUser,
-	TextDisplayBuilder,
 	type User,
 } from "discord.js";
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
-import { enviarRegistro } from "./util";
+import { Funci } from "@/lib/Funci";
+import { ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./util";
 
 export default function establecerCaracteristicaRegistrosDeCanalesDeTexto(
 	cliente: Client,
 ): void {
-	cliente.on(Events.MessageUpdate, registrarMensajeEditado);
-	cliente.on(Events.MessageDelete, registrarMensajeEliminado);
-	cliente.on(Events.MessageReactionAdd, registrarReaccionAñadida);
-	cliente.on(Events.MessageReactionRemove, registrarReaccionEliminada);
+	cliente.on(Events.MessageUpdate, (ma, mn) => new MensajeEditado(ma, mn).registrar());
+	cliente.on(Events.MessageDelete, (m) => new MensajeEliminado(m).registrar());
+	cliente.on(Events.MessageReactionAdd, (r, u) => new ReaccionAgregada(r, u).registrar());
+	cliente.on(Events.MessageReactionRemove, (r, u) =>
+		new ReaccionEliminada(r, u).registrar(),
+	);
 }
 
-function registrarMensajeEditado(
-	mensajeAntiguo: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
-	nuevoMensaje: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
-) {
-	if (!mensajeAntiguo.content || !nuevoMensaje.content) return;
-	if (mensajeAntiguo.content === nuevoMensaje.content) return;
+abstract class RegistroDeCanalesDeTexto extends Registro {
+	protected override canalDeRegistros = canalDeRegistrosDeCanalesDeTexto;
+}
 
-	const usuario = mensajeAntiguo.member?.user || nuevoMensaje.member?.user;
+class MensajeEditado extends RegistroDeCanalesDeTexto {
+	constructor(
+		private mensajeAntiguo: OmitPartialGroupDMChannel<
+			Message<boolean> | PartialMessage<boolean>
+		>,
+		private nuevoMensaje: OmitPartialGroupDMChannel<
+			Message<boolean> | PartialMessage<boolean>
+		>,
+	) {
+		super();
+	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (!this.mensajeAntiguo.content || !this.nuevoMensaje.content)
+			return Funci.fallo(
+				new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }),
+			);
+		if (this.mensajeAntiguo.content === this.nuevoMensaje.content)
+			return Funci.fallo(
+				new SinEventosQueAsignar({ mensaje: "El contenido no ha cambiado" }),
+			);
+
+		const usuario = this.mensajeAntiguo.member?.user || this.nuevoMensaje.member?.user;
+
+		this.eventos.push(`
 ${usuario} editó su mensaje de contenido:
-${codeBlock(mensajeAntiguo.content)}
+${codeBlock(this.mensajeAntiguo.content)}
 a:
-${codeBlock(nuevoMensaje.content)}
-en el canal ${nuevoMensaje.channel}. [Clic aquí para ver](${nuevoMensaje.url})
-`),
-	);
+${codeBlock(this.nuevoMensaje.content)}
+en el canal ${this.nuevoMensaje.channel}. [Clic aquí para ver](${this.nuevoMensaje.url})
+`);
 
-	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
+		return Funci.exito(null);
+	}
 }
 
-function registrarMensajeEliminado(
-	mensaje: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage<boolean>>,
-) {
-	if (!mensaje.content) return;
+class MensajeEliminado extends RegistroDeCanalesDeTexto {
+	constructor(
+		private mensaje: OmitPartialGroupDMChannel<
+			Message<boolean> | PartialMessage<boolean>
+		>,
+	) {
+		super();
+	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-${mensaje.member?.user} eliminó su mensaje de contenido:
-${codeBlock(mensaje.content)}
-en el canal ${mensaje.channel}. [Clic aquí para ver](${mensaje.url})
-`),
-	);
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (!this.mensaje.content)
+			return Funci.fallo(
+				new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }),
+			);
 
-	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
+		this.eventos.push(`
+${this.mensaje.member?.user} eliminó su mensaje de contenido:
+${codeBlock(this.mensaje.content)}
+en el canal ${this.mensaje.channel}.
+`);
+
+		return Funci.exito(null);
+	}
 }
 
-function registrarReaccionAñadida(
-	{ emoji, message: mensaje }: MessageReaction | PartialMessageReaction,
-	usuario: User | PartialUser,
-) {
-	if (!mensaje.content) return;
+class ReaccionAgregada extends RegistroDeCanalesDeTexto {
+	constructor(
+		private reaccion: MessageReaction | PartialMessageReaction,
+		private usuario: User | PartialUser,
+	) {
+		super();
+	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(
-			`${usuario} añadio la reacción ${emoji} al mensaje de contenido:
-${codeBlock(mensaje.content)}
-en el canal ${mensaje.channel}. [Clic aquí para ver](${mensaje.url})`,
-		),
-	);
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (!this.reaccion.message.content)
+			return Funci.fallo(
+				new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }),
+			);
 
-	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
+		this.eventos.push(`
+${this.usuario} añadio la reacción ${this.reaccion.emoji} al mensaje de contenido:
+${codeBlock(this.reaccion.message.content)}
+en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
+`);
+
+		return Funci.exito(null);
+	}
 }
 
-function registrarReaccionEliminada(
-	{ emoji, message: mensaje }: MessageReaction | PartialMessageReaction,
-	usuario: User | PartialUser,
-) {
-	if (!mensaje.content) return;
+class ReaccionEliminada extends RegistroDeCanalesDeTexto {
+	constructor(
+		private reaccion: MessageReaction | PartialMessageReaction,
+		private usuario: User | PartialUser,
+	) {
+		super();
+	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-${usuario} eliminó su reacción ${emoji} del mensaje de contenido:
-${codeBlock(mensaje.content)}
-en el canal ${mensaje.channel}.
-`),
-	);
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (!this.reaccion.message.content)
+			return Funci.fallo(
+				new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }),
+			);
 
-	enviarRegistro(resumen, canalDeRegistrosDeCanalesDeTexto);
+		this.eventos.push(`
+${this.usuario} eliminó su reacción ${this.reaccion.emoji} del mensaje de contenido:
+${codeBlock(this.reaccion.message.content)}
+en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
+`);
+
+		return Funci.exito(null);
+	}
 }
