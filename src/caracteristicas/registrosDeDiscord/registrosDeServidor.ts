@@ -2,174 +2,227 @@ import {
 	type CategoryChannel,
 	ChannelType,
 	type Client,
-	ContainerBuilder,
 	type DMChannel,
 	Events,
 	inlineCode,
 	type NonThreadGuildBasedChannel,
 	type Role,
-	TextDisplayBuilder,
 } from "discord.js";
 import { canalDeRegistrosDeServidor } from "@/caches";
 import { Funci } from "@/lib/Funci";
-import { enviarRegistro } from "./util";
+import { type ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./util";
 
 export default function establecerCaracteristicaDeRegistrosDeServidor(
 	cliente: Client,
 ): void {
-	cliente.on(Events.ChannelCreate, registrarCanalCreado);
-	cliente.on(Events.ChannelDelete, registrarCanalEliminado);
-	cliente.on(Events.ChannelUpdate, registrarCanalActualizado);
-	cliente.on(Events.GuildRoleCreate, registrarRolCreado);
-	cliente.on(Events.GuildRoleDelete, registrarRolEliminado);
-	cliente.on(Events.GuildRoleUpdate, registrarRolActualizado);
+	cliente.on(Events.ChannelCreate, (c) => new CanalCreado(c).registrar());
+	cliente.on(Events.ChannelDelete, (c) => new CanalEliminado(c).registrar());
+	cliente.on(Events.ChannelUpdate, (ca, cn) => new CanalActualizado(ca, cn).registrar());
+	cliente.on(Events.GuildRoleCreate, (r) => new RolCreado(r).registrar());
+	cliente.on(Events.GuildRoleDelete, (r) => new RolEliminado(r).registrar());
+	cliente.on(Events.GuildRoleUpdate, (ra, rn) => new RolActualizado(ra, rn).registrar());
 }
 
-function registrarCanalCreado(canal: NonThreadGuildBasedChannel): void {
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-Se creó el canal ${resumirCanal(canal)}, de tipo ${tipoDeCanal(canal.type)}.
-`),
-	);
+abstract class RegistroDeServidor extends Registro {
+	protected override canalDeRegistros = canalDeRegistrosDeServidor;
 
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
+	protected static resumirCanal(canal: NonThreadGuildBasedChannel): string {
+		return `**${canal.name} - [${inlineCode(canal.id)}](${canal.url})**`;
+	}
+
+	protected static tipoDeCanal(tipo: ChannelType): string {
+		const nombres: Record<ChannelType, string> = {
+			[ChannelType.GuildText]: "Canal de texto",
+			[ChannelType.DM]: "Mensaje directo",
+			[ChannelType.GuildVoice]: "Canal de voz",
+			[ChannelType.GroupDM]: "Grupo de mensajes directos",
+			[ChannelType.GuildCategory]: "Categoría",
+			[ChannelType.GuildAnnouncement]: "Canal de anuncios",
+			[ChannelType.AnnouncementThread]: "Hilo de anuncios",
+			[ChannelType.PublicThread]: "Hilo público",
+			[ChannelType.PrivateThread]: "Hilo privado",
+			[ChannelType.GuildStageVoice]: "Canal de escenario",
+			[ChannelType.GuildDirectory]: "Directorio de servidor",
+			[ChannelType.GuildForum]: "Canal de foro",
+			[ChannelType.GuildMedia]: "Canal de medios",
+		};
+
+		return nombres[tipo] ?? `Tipo desconocido (${tipo})`;
+	}
+
+	protected static resumirCategoria(categoria: CategoryChannel): string {
+		return `**${categoria} - ${inlineCode(categoria.id)}**`;
+	}
+
+	protected static resumirRol(rol: Role): string {
+		return `**${rol.name} - ${rol.id}**`;
+	}
 }
 
-function registrarCanalEliminado(canal: DMChannel | NonThreadGuildBasedChannel): void {
-	if (canal.isDMBased()) return;
+class CanalCreado extends RegistroDeServidor {
+	constructor(private readonly canal: NonThreadGuildBasedChannel) {
+		super();
+	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-Se eliminó el canal ${resumirCanal(canal)}, de tipo ${tipoDeCanal(canal.type)}.
-`),
-	);
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		this.eventos.push(
+			` Se creó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}. `,
+		);
 
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
+		return Funci.exito(null);
+	}
 }
 
-function registrarCanalActualizado(
-	canalAntiguo: DMChannel | NonThreadGuildBasedChannel,
-	nuevoCanal: DMChannel | NonThreadGuildBasedChannel,
-): void {
-	if (canalAntiguo.isDMBased() || nuevoCanal.isDMBased()) return;
+class CanalEliminado extends RegistroDeServidor {
+	constructor(private readonly canal: DMChannel | NonThreadGuildBasedChannel) {
+		super();
+	}
 
-	let accion: string;
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (this.canal.isDMBased())
+			return Funci.fallo(
+				new SinEventosQueAsignar({
+					mensaje: "No se registran canales de mensajes diretos",
+				}),
+			);
 
-	if (canalAntiguo.name !== nuevoCanal.name) {
-		accion = `Se actualizó el nombre del canal ${resumirCanal(canalAntiguo)}, de ${canalAntiguo.name} a ${nuevoCanal.name}`;
-	} else if (!canalAntiguo.parent && nuevoCanal.parent) {
-		accion = `Se añadió el canal ${resumirCanal(canalAntiguo)} a la categoria ${resumirCategoria(nuevoCanal.parent)}`;
-	} else if (
-		canalAntiguo.parent &&
-		nuevoCanal.parent &&
-		canalAntiguo.parentId !== nuevoCanal.parentId
+		this.eventos.push(
+			`Se eliminó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
+		);
+
+		return Funci.exito(null);
+	}
+}
+
+class CanalActualizado extends RegistroDeServidor {
+	constructor(
+		private readonly canalAntiguo: DMChannel | NonThreadGuildBasedChannel,
+		private readonly canalNuevo: DMChannel | NonThreadGuildBasedChannel,
 	) {
-		accion = `Se cambió la categoría del canal ${resumirCanal(canalAntiguo)}, de ${resumirCategoria(canalAntiguo.parent)} a ${resumirCategoria(nuevoCanal.parent)}`;
-	} else if (canalAntiguo.parent && !nuevoCanal.parent) {
-		accion = `Se quitó el canal ${resumirCanal(canalAntiguo)} de la categoría ${canalAntiguo.parent}`;
-	} else {
-		return;
+		super();
 	}
 
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(accion),
-	);
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased())
+			return Funci.fallo(
+				new SinEventosQueAsignar({
+					mensaje: "No se registran canales de mensajes directos",
+				}),
+			);
 
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
-}
+		if (this.canalAntiguo.name !== this.canalNuevo.name)
+			this.eventos.push(
+				`Se actualizó el nombre del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${this.canalAntiguo.name} a ${this.canalNuevo.name}`,
+			);
 
-function resumirCanal(canal: NonThreadGuildBasedChannel): string {
-	return `**${canal.name} - [${inlineCode(canal.id)}](${canal.url})**`;
-}
+		if (!this.canalAntiguo.parent && this.canalNuevo.parent)
+			this.eventos.push(
+				`Se añadió el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} a la categoria ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
+			);
 
-function resumirCategoria(categoria: CategoryChannel): string {
-	return `**${categoria} - ${inlineCode(categoria.id)}**`;
-}
+		if (
+			this.canalAntiguo.parent &&
+			this.canalNuevo.parent &&
+			this.canalAntiguo.parentId !== this.canalNuevo.parentId
+		)
+			this.eventos.push(
+				`Se cambió la categoría del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${RegistroDeServidor.resumirCategoria(this.canalAntiguo.parent)} a ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
+			);
 
-function tipoDeCanal(tipo: ChannelType): string {
-	const nombres: Record<ChannelType, string> = {
-		[ChannelType.GuildText]: "Canal de texto",
-		[ChannelType.DM]: "Mensaje directo",
-		[ChannelType.GuildVoice]: "Canal de voz",
-		[ChannelType.GroupDM]: "Grupo de mensajes directos",
-		[ChannelType.GuildCategory]: "Categoría",
-		[ChannelType.GuildAnnouncement]: "Canal de anuncios",
-		[ChannelType.AnnouncementThread]: "Hilo de anuncios",
-		[ChannelType.PublicThread]: "Hilo público",
-		[ChannelType.PrivateThread]: "Hilo privado",
-		[ChannelType.GuildStageVoice]: "Canal de escenario",
-		[ChannelType.GuildDirectory]: "Directorio de servidor",
-		[ChannelType.GuildForum]: "Canal de foro",
-		[ChannelType.GuildMedia]: "Canal de medios",
-	};
+		if (this.canalAntiguo.parent && !this.canalNuevo.parent)
+			this.eventos.push(
+				`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoría ${this.canalAntiguo.parent}`,
+			);
 
-	return nombres[tipo] ?? `Tipo desconocido (${tipo})`;
-}
-
-function registrarRolCreado(rol: Role): void {
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-Se creó el rol ${resumirRol(rol)}
-`),
-	);
-
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
-}
-
-function registrarRolEliminado(rol: Role): void {
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(`
-Se eliminó el rol ${resumirRol(rol)}
-`),
-	);
-
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
-}
-
-function registrarRolActualizado(rolAntiguo: Role, rolNuevo: Role): void {
-	const acciones: string[] = [];
-
-	if (rolAntiguo.name !== rolNuevo.name) {
-		acciones.push(
-			`Se actualizó el nombre del rol ${resumirRol(rolAntiguo)} por ${resumirRol(rolNuevo)}`,
-		);
+		return Funci.exito(null);
 	}
-	if (rolAntiguo.hexColor !== rolNuevo.hexColor) {
-		acciones.push(
-			`Se actualizó el color del rol ${resumirRol(rolAntiguo)}, de ${rolAntiguo.hexColor} a ${rolNuevo.hexColor}`,
-		);
+}
+
+class RolCreado extends RegistroDeServidor {
+	constructor(private readonly rol: Role) {
+		super();
 	}
-	if (!rolAntiguo.permissions.equals(rolNuevo.permissions)) {
-		const permisosAntiguos = rolAntiguo.permissions.serialize();
-		const permisosNuevos = rolNuevo.permissions.serialize();
 
-		const constructorDeResumenDeDiferencias: string[] = [];
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		this.eventos.push(`Se creó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
 
-		for (const [claveAntigua, valorAntiguo] of Funci.Objeto.entradas(permisosAntiguos)) {
-			if (valorAntiguo !== permisosNuevos[claveAntigua]) {
-				constructorDeResumenDeDiferencias.push(
-					`- ${claveAntigua}: __${valorAntiguo ? "Sí" : "No"}__ -> **${permisosNuevos[claveAntigua] ? "Sí" : "No"}**`,
-				);
+		return Funci.exito(null);
+	}
+}
+
+class RolEliminado extends RegistroDeServidor {
+	constructor(private readonly rol: Role) {
+		super();
+	}
+
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		this.eventos.push(`Se eliminó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
+
+		return Funci.exito(null);
+	}
+}
+
+class RolActualizado extends RegistroDeServidor {
+	constructor(
+		private readonly rolAntiguo: Role,
+		private readonly rolNuevo: Role,
+	) {
+		super();
+	}
+
+	protected override asignarEventos(): Funci.Resultado<
+		null,
+		ErrorAlAsignarEventos | SinEventosQueAsignar
+	> {
+		if (this.rolAntiguo.name !== this.rolNuevo.name)
+			this.eventos.push(
+				`Se actualizó el nombre del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)} por ${RegistroDeServidor.resumirRol(this.rolNuevo)}`,
+			);
+
+		if (this.rolAntiguo.hexColor !== this.rolNuevo.hexColor)
+			this.eventos.push(
+				`Se actualizó el color del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)}, de ${this.rolAntiguo.hexColor} a ${this.rolNuevo.hexColor}`,
+			);
+
+		if (!this.rolAntiguo.permissions.equals(this.rolNuevo.permissions)) {
+			const permisosAntiguos = this.rolAntiguo.permissions.serialize();
+			const permisosNuevos = this.rolNuevo.permissions.serialize();
+
+			const constructorDeResumenDeDiferencias: string[] = [];
+
+			for (const [claveAntigua, valorAntiguo] of Funci.Objeto.entradas(
+				permisosAntiguos,
+			)) {
+				if (valorAntiguo !== permisosNuevos[claveAntigua]) {
+					constructorDeResumenDeDiferencias.push(
+						`- ${claveAntigua}: __${valorAntiguo ? "Sí" : "No"}__ -> **${permisosNuevos[claveAntigua] ? "Sí" : "No"}**`,
+					);
+				}
 			}
-		}
 
-		const diferencias = constructorDeResumenDeDiferencias.join("\n");
+			const diferencias = constructorDeResumenDeDiferencias.join("\n");
 
-		acciones.push(`
-Se actualizaron los permisos del rol ${resumirRol(rolAntiguo)} :
+			this.eventos.push(`
+Se actualizaron los permisos del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)} :
 ${diferencias}
 `);
+		}
+
+		return Funci.exito(null);
 	}
-
-	if (acciones.length === 0) return;
-
-	const resumen = new ContainerBuilder().addTextDisplayComponents(
-		new TextDisplayBuilder().setContent(acciones.join("\n\n")),
-	);
-
-	enviarRegistro(resumen, canalDeRegistrosDeServidor);
-}
-
-function resumirRol(rol: Role): string {
-	return `**${rol.name} - ${rol.id}**`;
 }
