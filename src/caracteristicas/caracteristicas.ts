@@ -1,15 +1,15 @@
 import type { Client } from "discord.js";
 import { Funci } from "@/lib/Funci";
 import establecerCaracteristicaPing from "./ping";
-import establecerCaracteristicaPreparado from "./preparado";
+import establecerCaracteristicaAutenticado from "./preparado";
 import establecerCaracteristicaRegistrosDeCanalesDeTexto from "./registrosDeDiscord/registrosDeCanalesDeTexto";
 import establecerCaracteristicaDeRegistrosDeCanalesDeVoz from "./registrosDeDiscord/registrosDeCanalesDeVoz";
-import establecerCaracteristicaSaludo from "./saludo";
 import establecerCaracteristicaDeRegistrosDeServidor from "./registrosDeDiscord/registrosDeServidor";
+import establecerCaracteristicaSaludo from "./saludo";
 
 export default function establecerCaracteristicas(cliente: Client) {
 	Funci.pipa(cliente).tubo(
-		establecerCaracteristicaPreparado,
+		establecerCaracteristicaAutenticado,
 		establecerCaracteristicaPing,
 		establecerCaracteristicaSaludo,
 		establecerCaracteristicaRegistrosDeCanalesDeTexto,

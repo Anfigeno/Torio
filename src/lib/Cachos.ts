@@ -33,7 +33,7 @@ export default class Cachos<T, K extends Error> {
 		this.alActualizar = fn;
 	}
 
-	public iniciar(): Funci.Resultado<null, ErrorAlIniciarElTemporizador> {
+	public async iniciar(): Promise<Funci.Resultado<null, ErrorAlIniciarElTemporizador>> {
 		if (this.actualizar === null)
 			return Funci.fallo(
 				new ErrorAlIniciarElTemporizador("El actualizador no ha sido establecido"),
@@ -52,7 +52,7 @@ export default class Cachos<T, K extends Error> {
 
 	private async ejecutarActualizacion(
 		actualizador: () => Promise<Funci.Resultado<T, ActualizacionFallida>>,
-	): Promise<void> {
+	): Promise<Funci.Resultado<T, ActualizacionFallida>> {
 		const alActualizar = this.alActualizar || (() => null);
 		alActualizar(this);
 
@@ -60,10 +60,11 @@ export default class Cachos<T, K extends Error> {
 
 		if (!actualizacionExitosa) {
 			if (this.alFallar !== undefined) this.alFallar(error, this);
-			return;
+			return Funci.fallo(error);
 		}
 
 		this._valor = valor;
+		return Funci.exito(valor);
 	}
 
 	public detener(): Funci.Resultado<null, ErrorAlDetenerElTemporizador> {
