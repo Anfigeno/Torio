@@ -1,36 +1,33 @@
-import type { Client, Message } from "discord.js";
 import registro from "@/configuracion/registro";
 import { Funci } from "@/lib/Funci";
+import { Caracteristica, ManejadorDeEvento } from "@/Torio";
+
+const saludo = new Caracteristica("Saludo");
 
 const SALUDOS = ["Hola", "ola", "oa"];
 const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
 
-export default function establecerCaracteristicaSaludo(cliente: Client) {
-	cliente.on("messageCreate", contestarSaludo);
-}
+saludo.agregarManejadorDeEvento(
+	new ManejadorDeEvento("messageCreate", async (_, mensaje) => {
+		const autorEsBot = mensaje.author.bot;
+		const mensajeEsSaludo = SALUDOS.some((saludo) => mensaje.content.includes(saludo));
+		if (autorEsBot || !mensajeEsSaludo) return;
 
-async function contestarSaludo(mensaje: Message) {
-	const autorEsBot = mensaje.author.bot;
-	const mensajeEsSaludo = SALUDOS.some((saludo) => mensaje.content.includes(saludo));
-	if (autorEsBot || !mensajeEsSaludo) return;
+		const saludo = RESPUESTAS_A_SALUDOS[
+			Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)
+		] as string;
 
-	registro.info(`Saludando a ${mensaje.author.username}`);
+		const { ok: seEnvioElMensaje, error } = await Funci.intentar({
+			accion: () => mensaje.reply(saludo),
+			atrapar: (e) =>
+				new ManejadorDeEvento.ErrorResponderMensaje({
+					mensaje: "No se pudo contestar un saludo",
+					errorBase: e,
+				}),
+		});
 
-	const saludo = RESPUESTAS_A_SALUDOS[
-		Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)
-	] as string;
+		if (!seEnvioElMensaje) registro.error(error);
+	}),
+);
 
-	const { ok: seEnvioElMensaje, error } = await Funci.intentar({
-		accion: () => mensaje.reply(saludo),
-		atrapar: (e) => new ErrorAlContestarSaludo(e),
-	});
-
-	if (!seEnvioElMensaje) registro.error(error);
-}
-
-class ErrorAlContestarSaludo extends Error {
-	constructor(public readonly errorBase?: unknown) {
-		super();
-		this.name = "ErrorAlContestarSaludo";
-	}
-}
+export default saludo;
