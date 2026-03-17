@@ -1,33 +1,34 @@
+import { Events } from "discord.js";
 import registro from "@/configuracion/registro";
 import { Funci } from "@/lib/Funci";
-import { Caracteristica, ManejadorDeEvento } from "@/Torio";
+import { Caracteristica } from "@/lib/Torio";
 
-const saludo = new Caracteristica("Saludo");
+const saludo = Funci.usando(new Caracteristica("Saludo"), (c) => {
+	const SALUDOS = ["Hola", "ola", "oa"];
+	const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
 
-const SALUDOS = ["Hola", "ola", "oa"];
-const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
-
-saludo.agregarManejadorDeEvento(
-	new ManejadorDeEvento("messageCreate", async (_, mensaje) => {
+	c.agregarManejadorDeEvento(Events.MessageCreate, async (mensaje) => {
 		const autorEsBot = mensaje.author.bot;
 		const mensajeEsSaludo = SALUDOS.some((saludo) => mensaje.content.includes(saludo));
 		if (autorEsBot || !mensajeEsSaludo) return;
 
-		const saludo = RESPUESTAS_A_SALUDOS[
-			Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)
-		] as string;
+		const saludo =
+			// biome-ignore lint/style/noNonNullAssertion: Esta controlado
+			RESPUESTAS_A_SALUDOS[Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)]!;
 
 		const { ok: seEnvioElMensaje, error } = await Funci.intentar({
 			accion: () => mensaje.reply(saludo),
 			atrapar: (e) =>
-				new ManejadorDeEvento.ErrorResponderMensaje({
-					mensaje: "No se pudo contestar un saludo",
+				new ErrorAlResponderPing({
+					mensaje: "No se pudo contestar a un saludo",
 					errorBase: e,
 				}),
 		});
 
 		if (!seEnvioElMensaje) registro.error(error);
-	}),
-);
+	});
+});
 
 export default saludo;
+
+class ErrorAlResponderPing extends Funci.ErrorBase {}

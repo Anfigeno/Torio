@@ -1,11 +1,11 @@
 import type { Client, ClientEvents } from "discord.js";
-import registro from "./configuracion/registro";
-import { Funci } from "./lib/Funci";
+import registro from "../configuracion/registro";
+import type { Funci } from "./Funci";
 
 export default class Torio {
-	private _caracteristicas: Caracteristica[] = [];
-
 	constructor(public readonly cliente: Client) {}
+
+	private _caracteristicas: Caracteristica[] = [];
 
 	public agregarCaracteristicas(...caracteristicas: Caracteristica[]): void {
 		this._caracteristicas.push(...caracteristicas);
@@ -17,42 +17,40 @@ export default class Torio {
 
 			if (caracteristica.manejadoresDeEvento.length === 0) continue;
 			for (const manejadorDeEvento of caracteristica.manejadoresDeEvento) {
-				this.cliente.on(manejadorDeEvento.evento, (...args) =>
-					manejadorDeEvento.despachador(this, ...args),
-				);
+				this.cliente.on(manejadorDeEvento.evento, manejadorDeEvento.despachador);
 			}
 
 			registro.info(
 				`[${caracteristica.nombre}] cargó ${caracteristica.manejadoresDeEvento.length} manejadores de eventos`,
 			);
 		}
+
+		const manejadoresDeEventosCargados = this._caracteristicas.reduce(
+			(acumulador, caracteristica) => caracteristica.manejadoresDeEvento.length + acumulador,
+			0,
+		);
+
+		registro.info(`Se cargaron ${manejadoresDeEventosCargados} manejadores de evento en total`);
 	}
 }
 
 export class Caracteristica {
-	private _manejadoresDeEvento: ManejadorDeEvento<any>[] = [];
-	public get manejadoresDeEvento(): ManejadorDeEvento<any>[] {
+	private _manejadoresDeEvento: ManejadorDeEvento<Funci.Ignorable>[] = [];
+	public get manejadoresDeEvento(): ManejadorDeEvento<Funci.Ignorable>[] {
 		return this._manejadoresDeEvento;
 	}
 
 	constructor(public readonly nombre: string) {}
 
 	public agregarManejadorDeEvento<T extends keyof ClientEvents>(
-		manejador: ManejadorDeEvento<T>,
+		evento: T,
+		despachador: (...args: ClientEvents[T]) => void,
 	): void {
-		this._manejadoresDeEvento.push(manejador);
+		this._manejadoresDeEvento.push({ evento, despachador });
 	}
 }
 
-export class ManejadorDeEvento<T extends keyof ClientEvents> {
-	constructor(
-		public readonly evento: T,
-		public readonly despachador: (
-			ctx: Torio,
-			...args: ClientEvents[T]
-		) => void | Promise<void>,
-	) {}
-
-	public static ErrorResponderMensaje =
-		class ErrorResponderMensaje extends Funci.ErrorBase {};
-}
+export type ManejadorDeEvento<T extends keyof ClientEvents> = {
+	evento: T;
+	despachador: (...args: ClientEvents[T]) => void;
+};

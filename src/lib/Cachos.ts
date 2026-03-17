@@ -21,7 +21,9 @@ export default class Cachos<T, K extends Error> {
 		return Funci.exito(this._valor);
 	}
 
-	public establecerActualizador(actualizador: () => Promise<Funci.Resultado<T, K>>) {
+	public establecerActualizador(
+		actualizador: () => Promise<Funci.Resultado<T, K>>,
+	) {
 		this.actualizar = actualizador;
 	}
 
@@ -36,7 +38,9 @@ export default class Cachos<T, K extends Error> {
 	public async iniciar(): Promise<Funci.Resultado<null, ErrorAlIniciarElTemporizador>> {
 		if (this.actualizar === null)
 			return Funci.fallo(
-				new ErrorAlIniciarElTemporizador("El actualizador no ha sido establecido"),
+				new ErrorAlIniciarElTemporizador({
+					mensaje: "El actualizador no ha sido establecido",
+				}),
 			);
 
 		const actualizador = this.actualizar;
@@ -51,8 +55,8 @@ export default class Cachos<T, K extends Error> {
 	}
 
 	private async ejecutarActualizacion(
-		actualizador: () => Promise<Funci.Resultado<T, ActualizacionFallida>>,
-	): Promise<Funci.Resultado<T, ActualizacionFallida>> {
+		actualizador: () => Promise<Funci.Resultado<T, K>>,
+	): Promise<Funci.Resultado<T, K>> {
 		const alActualizar = this.alActualizar || (() => null);
 		alActualizar(this);
 
@@ -70,7 +74,9 @@ export default class Cachos<T, K extends Error> {
 	public detener(): Funci.Resultado<null, ErrorAlDetenerElTemporizador> {
 		if (this.temporizador === null)
 			return Funci.fallo(
-				new ErrorAlDetenerElTemporizador("El temporizador no ha sido iniciado"),
+				new ErrorAlDetenerElTemporizador({
+					mensaje: "El temporizador no ha sido iniciado",
+				}),
 			);
 
 		clearInterval(this.temporizador);
@@ -79,42 +85,7 @@ export default class Cachos<T, K extends Error> {
 	}
 }
 
-export class ErrorAlIniciarElTemporizador extends Error {
-	constructor(
-		mensaje: string,
-		public readonly errorBase?: unknown,
-	) {
-		super(mensaje);
-		this.name = "ErrorAlIniciarElTemporizador";
-	}
-}
-
-export class ErrorAlDetenerElTemporizador extends Error {
-	constructor(
-		mensaje: string,
-		public readonly errorBase?: unknown,
-	) {
-		super(mensaje);
-		this.name = "ErrorAlDetenerElTemporizador";
-	}
-}
-
-export class ActualizacionFallida extends Error {
-	constructor(
-		mensaje?: string,
-		public readonly errorBase?: unknown,
-	) {
-		super(mensaje);
-		this.name = "ActualizacionFallida";
-	}
-}
-
-class ValorNoInicializado extends Error {
-	constructor(
-		mensaje?: string,
-		public readonly errorBase?: unknown,
-	) {
-		super(mensaje);
-		this.name = "ValorNoInicializado";
-	}
-}
+export class ErrorAlIniciarElTemporizador extends Funci.ErrorBase {}
+export class ErrorAlDetenerElTemporizador extends Funci.ErrorBase {}
+export class ActualizacionFallida extends Funci.ErrorBase {}
+export class ValorNoInicializado extends Funci.ErrorBase {}

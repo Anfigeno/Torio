@@ -1,6 +1,14 @@
 export namespace Funci {
+	// biome-ignore lint/suspicious/noExplicitAny: Pa eso es
+	export type Ignorable = any;
+
 	export function con<T, K>(valor: T, fn: (v: T) => K): K {
 		return fn(valor);
+	}
+
+	export function usando<T>(valor: T, fn: (v: T) => unknown): T {
+		fn(valor);
+		return valor;
 	}
 
 	export interface Pipa<T> {
@@ -64,10 +72,10 @@ export namespace Funci {
 	export class ErrorBase extends Error {
 		public readonly errorBase: unknown;
 
-		constructor(cfg: { mensaje?: string; errorBase?: unknown }) {
-			super(cfg.mensaje);
+		constructor(cfg?: { mensaje?: string; errorBase?: unknown }) {
+			super(cfg?.mensaje);
 
-			this.errorBase = cfg.errorBase;
+			this.errorBase = cfg?.errorBase;
 			this.name = this.constructor.name;
 		}
 	}

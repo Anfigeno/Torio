@@ -1,13 +1,14 @@
-import { type Client, Events, type VoiceState } from "discord.js";
+import { Events, type VoiceState } from "discord.js";
 import { canalDeRegistrosDeCanalesDeVoz } from "@/caches";
 import { Funci } from "@/lib/Funci";
+import { Caracteristica } from "@/lib/Torio";
 import { ErrorAlAsignarEventos, Registro, type SinEventosQueAsignar } from "./util";
 
-export default function establecerCaracteristicaDeRegistrosDeCanalesDeVoz(
-	cliente: Client,
-): void {
-	cliente.on(Events.VoiceStateUpdate, (ea, en) => new CambioDeEstado(ea, en).registrar());
-}
+const registrosDeCanalesDeVoz = Funci.usando(new Caracteristica("Registros de canales de voz"), (c) => {
+	c.agregarManejadorDeEvento(Events.VoiceStateUpdate, (...args) => new CambioDeEstado(...args).registrar());
+});
+
+export default registrosDeCanalesDeVoz;
 
 abstract class RegistroDeCanalesDeVoz extends Registro {
 	protected override canalDeRegistros = canalDeRegistrosDeCanalesDeVoz;
@@ -21,16 +22,11 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<
-		null,
-		ErrorAlAsignarEventos | SinEventosQueAsignar
-	> {
+	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
 		const usuario = this.estadoNuevo.member?.user || this.estadoAnterior.member?.user;
 
 		if (!usuario) {
-			return Funci.fallo(
-				new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }),
-			);
+			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }));
 		}
 
 		if (!this.estadoAnterior.channelId && this.estadoNuevo.channelId)

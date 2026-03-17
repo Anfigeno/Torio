@@ -1,44 +1,14 @@
-import {
-	ContainerBuilder,
-	type GuildTextBasedChannel,
-	TextDisplayBuilder,
-} from "discord.js";
+import { ContainerBuilder, type GuildTextBasedChannel, TextDisplayBuilder } from "discord.js";
 import type { ErrorAlObtenerCanal } from "@/caches";
 import registro from "@/configuracion/registro";
 import type Cachos from "@/lib/Cachos";
 import { Funci } from "@/lib/Funci";
 
-export async function enviarRegistro(
-	resumenDeRegistro: ContainerBuilder,
-	canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>,
-) {
-	const { ok: canalObtenido, valor: canal, error } = canalDeRegistros.obtenerValor();
-	if (!canalObtenido) {
-		registro.error(error);
-		return;
-	}
-
-	const { ok: registroEnviado, error: error2 } = await Funci.intentar({
-		accion: () =>
-			canal.send({
-				flags: ["IsComponentsV2"],
-				components: [resumenDeRegistro],
-				allowedMentions: { users: [] },
-			}),
-		atrapar: (e) => new ErrorAlEnviarRegistro({ errorBase: e }),
-	});
-
-	if (!registroEnviado) registro.error(error2);
-}
-
 export abstract class Registro {
 	protected abstract canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>;
 	protected eventos: string[] = [];
 
-	protected abstract asignarEventos(): Funci.Resultado<
-		null,
-		ErrorAlAsignarEventos | SinEventosQueAsignar
-	>;
+	protected abstract asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar>;
 
 	private crearResumen(): Funci.Resultado<ContainerBuilder | null, ErrorAlCrearResumen> {
 		const { ok: eventosAsignados, error } = this.asignarEventos();
@@ -58,21 +28,13 @@ export abstract class Registro {
 	}
 
 	public async registrar(): Promise<void> {
-		const {
-			ok: canalObtenido,
-			valor: canal,
-			error: errorAlObtenerElCanal,
-		} = this.canalDeRegistros.obtenerValor();
+		const { ok: canalObtenido, valor: canal, error: errorAlObtenerElCanal } = this.canalDeRegistros.obtenerValor();
 		if (!canalObtenido) {
 			registro.error(errorAlObtenerElCanal);
 			return;
 		}
 
-		const {
-			ok: resumenCreado,
-			valor: resumen,
-			error: errorAlCrearElResumen,
-		} = this.crearResumen();
+		const { ok: resumenCreado, valor: resumen, error: errorAlCrearElResumen } = this.crearResumen();
 		if (!resumenCreado) {
 			registro.error(errorAlCrearElResumen);
 			return;
