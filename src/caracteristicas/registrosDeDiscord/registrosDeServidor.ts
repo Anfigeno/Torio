@@ -10,7 +10,7 @@ import {
 import { canalDeRegistrosDeServidor } from "@/caches";
 import { Funci } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
-import { type ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./util";
+import { ErrorAlAsignarEventos, Registro } from "./Registro";
 
 const registrosDeServidor = Funci.usando(new Caracteristica("Registros de servidor"), (c) => {
 	c.agregarManejadorDeEvento(Events.ChannelCreate, (...args) => new CanalCreado(...args).registrar());
@@ -64,12 +64,14 @@ class CanalCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
-		this.eventos.push(
+	protected override asignarEventos(): Funci.Resultado<string[], ErrorAlAsignarEventos> {
+		const eventos: string[] = [];
+
+		eventos.push(
 			`Se creó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -78,19 +80,16 @@ class CanalEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
-		if (this.canal.isDMBased())
-			return Funci.fallo(
-				new SinEventosQueAsignar({
-					mensaje: "No se registran canales de mensajes diretos",
-				}),
-			);
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+		if (this.canal.isDMBased()) return Funci.exito(null);
 
-		this.eventos.push(
+		const eventos: string[] = [];
+
+		eventos.push(
 			`Se eliminó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -102,35 +101,32 @@ class CanalActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
-		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased())
-			return Funci.fallo(
-				new SinEventosQueAsignar({
-					mensaje: "No se registran canales de mensajes directos",
-				}),
-			);
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased()) return Funci.exito(null);
+
+		const eventos: string[] = [];
 
 		if (this.canalAntiguo.name !== this.canalNuevo.name)
-			this.eventos.push(
+			eventos.push(
 				`Se actualizó el nombre del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${this.canalAntiguo.name} a ${this.canalNuevo.name}`,
 			);
 
 		if (!this.canalAntiguo.parent && this.canalNuevo.parent)
-			this.eventos.push(
+			eventos.push(
 				`Se añadió el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} a la categoria ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
 			);
 
 		if (this.canalAntiguo.parent && this.canalNuevo.parent && this.canalAntiguo.parentId !== this.canalNuevo.parentId)
-			this.eventos.push(
+			eventos.push(
 				`Se cambió la categoría del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${RegistroDeServidor.resumirCategoria(this.canalAntiguo.parent)} a ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
 			);
 
 		if (this.canalAntiguo.parent && !this.canalNuevo.parent)
-			this.eventos.push(
+			eventos.push(
 				`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoría ${this.canalAntiguo.parent}`,
 			);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -139,10 +135,12 @@ class RolCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
-		this.eventos.push(`Se creó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+		const eventos: string[] = [];
 
-		return Funci.exito(null);
+		eventos.push(`Se creó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
+
+		return Funci.exito(eventos);
 	}
 }
 
@@ -151,10 +149,12 @@ class RolEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
-		this.eventos.push(`Se eliminó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+		const eventos: string[] = [];
 
-		return Funci.exito(null);
+		eventos.push(`Se eliminó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
+
+		return Funci.exito(eventos);
 	}
 }
 
@@ -166,14 +166,16 @@ class RolActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+		const eventos: string[] = [];
+
 		if (this.rolAntiguo.name !== this.rolNuevo.name)
-			this.eventos.push(
+			eventos.push(
 				`Se actualizó el nombre del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)} por ${RegistroDeServidor.resumirRol(this.rolNuevo)}`,
 			);
 
 		if (this.rolAntiguo.hexColor !== this.rolNuevo.hexColor)
-			this.eventos.push(
+			eventos.push(
 				`Se actualizó el color del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)}, de ${this.rolAntiguo.hexColor} a ${this.rolNuevo.hexColor}`,
 			);
 
@@ -193,12 +195,12 @@ class RolActualizado extends RegistroDeServidor {
 
 			const diferencias = constructorDeResumenDeDiferencias.join("\n");
 
-			this.eventos.push(`
+			eventos.push(`
 Se actualizaron los permisos del rol ${RegistroDeServidor.resumirRol(this.rolAntiguo)} :
 ${diferencias}
 `);
 		}
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }

@@ -12,7 +12,7 @@ import {
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
 import { Funci } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
-import { ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./util";
+import { ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./Registro";
 
 const registrosDeCanalesDeTexto = Funci.usando(new Caracteristica("Registros de canales de texto"), (c) => {
 	c.agregarManejadorDeEvento(Events.MessageUpdate, (...args) => new MensajeEditado(...args).registrar());
@@ -35,15 +35,16 @@ class MensajeEditado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
 		if (!this.mensajeAntiguo.content || !this.nuevoMensaje.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }));
 		if (this.mensajeAntiguo.content === this.nuevoMensaje.content)
 			return Funci.fallo(new SinEventosQueAsignar({ mensaje: "El contenido no ha cambiado" }));
 
+		const eventos = [];
 		const usuario = this.mensajeAntiguo.member?.user || this.nuevoMensaje.member?.user;
 
-		this.eventos.push(`
+		eventos.push(`
 ${usuario} editó su mensaje de contenido:
 ${codeBlock(this.mensajeAntiguo.content)}
 a:
@@ -51,7 +52,7 @@ ${codeBlock(this.nuevoMensaje.content)}
 en el canal ${this.nuevoMensaje.channel}. [Clic aquí para ver](${this.nuevoMensaje.url})
 `);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -60,17 +61,19 @@ class MensajeEliminado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
 		if (!this.mensaje.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
-		this.eventos.push(`
+		const eventos: string[] = [];
+
+		eventos.push(`
 ${this.mensaje.member?.user} eliminó su mensaje de contenido:
 ${codeBlock(this.mensaje.content)}
 en el canal ${this.mensaje.channel}.
 `);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -83,17 +86,19 @@ class ReaccionAgregada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
 		if (!this.reaccion.message.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
-		this.eventos.push(`
+		const eventos: string[] = [];
+
+		eventos.push(`
 ${this.usuario} añadio la reacción ${this.reaccion.emoji} al mensaje de contenido:
 ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }
 
@@ -106,16 +111,18 @@ class ReaccionEliminada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar> {
+	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
 		if (!this.reaccion.message.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
-		this.eventos.push(`
+		const eventos: string[] = [];
+
+		eventos.push(`
 ${this.usuario} eliminó su reacción ${this.reaccion.emoji} del mensaje de contenido:
 ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.exito(null);
+		return Funci.exito(eventos);
 	}
 }

@@ -6,22 +6,17 @@ import { Funci } from "@/lib/Funci";
 
 export abstract class Registro {
 	protected abstract canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>;
-	protected eventos: string[] = [];
 
-	protected abstract asignarEventos(): Funci.Resultado<null, ErrorAlAsignarEventos | SinEventosQueAsignar>;
+	protected abstract asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos>;
 
 	private crearResumen(): Funci.Resultado<ContainerBuilder | null, ErrorAlCrearResumen> {
-		const { ok: eventosAsignados, error } = this.asignarEventos();
-		if (!eventosAsignados) {
-			if (error instanceof SinEventosQueAsignar) return Funci.exito(null);
+		const { ok: eventosAsignados, valor: eventos, error } = this.asignarEventos();
+		if (!eventosAsignados) return Funci.fallo(new ErrorAlCrearResumen({ errorBase: error }));
 
-			return Funci.fallo(new ErrorAlCrearResumen({ errorBase: error }));
-		}
-
-		if (this.eventos.length === 0) return Funci.exito(null);
+		if (!eventos || eventos.length === 0) return Funci.exito(null);
 
 		const resumen = new ContainerBuilder().addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(this.eventos.join("\n\n")),
+			new TextDisplayBuilder().setContent(eventos.join("\n\n")),
 		);
 
 		return Funci.exito(resumen);
