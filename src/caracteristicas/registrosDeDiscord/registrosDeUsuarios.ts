@@ -1,11 +1,11 @@
 import { Events, type GuildMember, type GuildTextBasedChannel, inlineCode, type PartialGuildMember } from "discord.js";
 import { canalDeRegistrosDeUsuarios, type ErrorAlObtenerCanal } from "@/caches";
 import type Cachos from "@/lib/Cachos";
-import { Funci } from "@/lib/Funci";
+import { con, exito, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { type ErrorAlAsignarEventos, Registro } from "./Registro";
 
-export const registrosDeUsuarios = Funci.usando(new Caracteristica("Registros de usuarios"), (c) => {
+export const registrosDeUsuarios = usando(new Caracteristica("Registros de usuarios"), (c) => {
 	c.agregarManejadorDeEvento(Events.GuildMemberAdd, (...args) => new MiembroSeUnio(...args).registrar());
 	c.agregarManejadorDeEvento(Events.GuildMemberRemove, (...args) => new MiembroSeFue(...args).registrar());
 	c.agregarManejadorDeEvento(Events.GuildMemberUpdate, (...args) => new MiembroActualizado(...args).registrar());
@@ -20,12 +20,12 @@ class MiembroSeUnio extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`${this.miembro} se unió al servidor`);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -34,12 +34,12 @@ class MiembroSeFue extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`${this.miembro} se fue del servidor`);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -51,52 +51,52 @@ class MiembroActualizado extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
-		Funci.con(this.miembroAntiguo.nickname, this.miembroNuevo.nickname, (apodoAntiguo, apodoNuevo) => {
+		con(this.miembroAntiguo.nickname, this.miembroNuevo.nickname, (apodoAntiguo, apodoNuevo) => {
 			if (!apodoAntiguo && apodoNuevo) eventos.push(`${this.miembroNuevo} se puso el apodo ${inlineCode(apodoNuevo)}`);
 			if (apodoAntiguo && !apodoNuevo) eventos.push(`${this.miembroNuevo} se quitó el apodo`);
 			if (apodoAntiguo && apodoNuevo && apodoAntiguo !== apodoNuevo)
 				eventos.push(`${this.miembroNuevo} se cambió el apodo, de ${inlineCode(apodoAntiguo)} a ${inlineCode(apodoNuevo)}`);
 		});
 
-		Funci.con(this.miembroAntiguo.avatarURL(), this.miembroNuevo.avatarURL(), (avatarAntiguo, avatarNuevo) => {
+		con(this.miembroAntiguo.avatarURL(), this.miembroNuevo.avatarURL(), (avatarAntiguo, avatarNuevo) => {
 			if (!avatarAntiguo && avatarNuevo) eventos.push(`${this.miembroNuevo} se puso el avatar de servidor: ${avatarNuevo}`);
 			if (avatarAntiguo && !avatarNuevo) eventos.push(`${this.miembroNuevo} se quitó el avatar de servidor`);
 			if (avatarAntiguo && avatarNuevo && avatarAntiguo !== avatarNuevo)
 				eventos.push(`${this.miembroNuevo} se cambió el avatar de servidor, de ${avatarAntiguo} por ${avatarNuevo}`);
 		});
 
-		Funci.con(this.miembroAntiguo.user.avatarURL(), this.miembroNuevo.user.avatarURL(), (avatarAntiguo, avatarNuevo) => {
+		con(this.miembroAntiguo.user.avatarURL(), this.miembroNuevo.user.avatarURL(), (avatarAntiguo, avatarNuevo) => {
 			if (!avatarAntiguo && avatarNuevo) eventos.push(`${this.miembroNuevo} se puso el avatar\n${avatarNuevo}`);
 			if (avatarAntiguo && !avatarNuevo) eventos.push(`${this.miembroNuevo} se quitó el avatar`);
 			if (avatarAntiguo && avatarNuevo && avatarAntiguo !== avatarNuevo)
 				eventos.push(`${this.miembroNuevo} se cambió el avatar, de\n${avatarAntiguo}\npor\n${avatarNuevo}`);
 		});
 
-		Funci.con(this.miembroAntiguo.bannerURL(), this.miembroNuevo.bannerURL(), (cartelAntiguo, cartelNuevo) => {
+		con(this.miembroAntiguo.bannerURL(), this.miembroNuevo.bannerURL(), (cartelAntiguo, cartelNuevo) => {
 			if (!cartelAntiguo && cartelNuevo) eventos.push(`${this.miembroNuevo} se puso el cartel de servidor\n${cartelNuevo}`);
 			else if (cartelAntiguo && !cartelNuevo) eventos.push(`${this.miembroNuevo} se quitó el cartel de servidor`);
 			else if (cartelAntiguo !== cartelNuevo)
 				eventos.push(`${this.miembroNuevo} se cambió el cartel de servidor, de\n${cartelAntiguo}\npor\n${cartelNuevo}`);
 		});
 
-		Funci.con(this.miembroAntiguo.user.bannerURL(), this.miembroNuevo.user.bannerURL(), (cartelAntiguo, cartelNuevo) => {
+		con(this.miembroAntiguo.user.bannerURL(), this.miembroNuevo.user.bannerURL(), (cartelAntiguo, cartelNuevo) => {
 			if (!cartelAntiguo && cartelNuevo) eventos.push(`${this.miembroNuevo} se puso el cartel\n${cartelNuevo}`);
 			if (cartelAntiguo && !cartelNuevo) eventos.push(`${this.miembroNuevo} se quitó el cartel`);
 			if (cartelAntiguo && cartelNuevo && cartelAntiguo !== cartelNuevo)
 				eventos.push(`${this.miembroNuevo} se cambió el cartel, de\n${cartelAntiguo}\npor\n${cartelNuevo}`);
 		});
 
-		Funci.con(this.miembroAntiguo.user.username, this.miembroNuevo.user.username, (nombreAntiguo, nombreNuevo) => {
+		con(this.miembroAntiguo.user.username, this.miembroNuevo.user.username, (nombreAntiguo, nombreNuevo) => {
 			if (nombreAntiguo !== nombreNuevo)
 				eventos.push(
 					`${this.miembroNuevo} cambió su nombre de usuario, de ${inlineCode(nombreAntiguo)}, por ${inlineCode(nombreNuevo)}`,
 				);
 		});
 
-		Funci.con(this.miembroAntiguo.roles.cache, this.miembroNuevo.roles.cache, (rolesAntiguos, rolesNuevos) => {
+		con(this.miembroAntiguo.roles.cache, this.miembroNuevo.roles.cache, (rolesAntiguos, rolesNuevos) => {
 			if (rolesAntiguos.equals(rolesNuevos)) return;
 
 			const constructorDeRolesEliminados: string[] = [];
@@ -117,6 +117,6 @@ class MiembroActualizado extends RegistroDeUsuario {
 				eventos.push(`${this.miembroNuevo} perdió los roles\n${constructorDeRolesEliminados.map((v) => `- ${v}`).join("\n")}`);
 		});
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }

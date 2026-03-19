@@ -1,15 +1,15 @@
 import { Events } from "discord.js";
 import registro from "@/configuracion/registro";
-import { Funci } from "@/lib/Funci";
+import { ErrorBase, intentar, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
-const ping = Funci.usando(new Caracteristica("Ping"), (c) => {
+const ping = usando(new Caracteristica("Ping"), (c) => {
 	c.agregarManejadorDeEvento(Events.MessageCreate, async (mensaje) => {
 		if (mensaje.author.bot || mensaje.content !== "!ping") return;
 
 		const latencia = Date.now() - mensaje.createdTimestamp;
 
-		const { ok: seEnvioElMensaje, error } = await Funci.intentar({
+		const { ok: seEnvioElMensaje, error } = await intentar({
 			accion: () => mensaje.reply(`Pong! ${latencia}ms`),
 			atrapar: (e) =>
 				new ErrorAlResponderPing({
@@ -24,4 +24,4 @@ const ping = Funci.usando(new Caracteristica("Ping"), (c) => {
 
 export default ping;
 
-class ErrorAlResponderPing extends Funci.ErrorBase {}
+class ErrorAlResponderPing extends ErrorBase {}

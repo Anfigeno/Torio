@@ -1,8 +1,8 @@
-import { Funci } from "./Funci";
+import { ErrorBase, exito, fallo, type Resultado } from "./Funci";
 
 export default class Cachos<T, K extends Error> {
 	private _valor: T | null = null;
-	private actualizar: null | (() => Promise<Funci.Resultado<T, K>>) = null;
+	private actualizar: null | (() => Promise<Resultado<T, K>>) = null;
 	private intervalo: number;
 	private temporizador: NodeJS.Timeout | null = null;
 	private alFallar?: (error: Error, ctx: this) => void;
@@ -16,14 +16,12 @@ export default class Cachos<T, K extends Error> {
 		this.intervalo = intervalo;
 	}
 
-	public obtenerValor(): Funci.Resultado<T, ValorNoInicializado> {
-		if (this._valor === null) return Funci.fallo(new ValorNoInicializado());
-		return Funci.exito(this._valor);
+	public obtenerValor(): Resultado<T, ValorNoInicializado> {
+		if (this._valor === null) return fallo(new ValorNoInicializado());
+		return exito(this._valor);
 	}
 
-	public establecerActualizador(
-		actualizador: () => Promise<Funci.Resultado<T, K>>,
-	) {
+	public establecerActualizador(actualizador: () => Promise<Resultado<T, K>>) {
 		this.actualizar = actualizador;
 	}
 
@@ -35,9 +33,9 @@ export default class Cachos<T, K extends Error> {
 		this.alActualizar = fn;
 	}
 
-	public async iniciar(): Promise<Funci.Resultado<null, ErrorAlIniciarElTemporizador>> {
+	public async iniciar(): Promise<Resultado<null, ErrorAlIniciarElTemporizador>> {
 		if (this.actualizar === null)
-			return Funci.fallo(
+			return fallo(
 				new ErrorAlIniciarElTemporizador({
 					mensaje: "El actualizador no ha sido establecido",
 				}),
@@ -46,17 +44,12 @@ export default class Cachos<T, K extends Error> {
 		const actualizador = this.actualizar;
 		this.ejecutarActualizacion(actualizador);
 
-		this.temporizador = setInterval(
-			() => this.ejecutarActualizacion(actualizador),
-			this.intervalo,
-		);
+		this.temporizador = setInterval(() => this.ejecutarActualizacion(actualizador), this.intervalo);
 
-		return Funci.exito(null);
+		return exito(null);
 	}
 
-	private async ejecutarActualizacion(
-		actualizador: () => Promise<Funci.Resultado<T, K>>,
-	): Promise<Funci.Resultado<T, K>> {
+	private async ejecutarActualizacion(actualizador: () => Promise<Resultado<T, K>>): Promise<Resultado<T, K>> {
 		const alActualizar = this.alActualizar || (() => null);
 		alActualizar(this);
 
@@ -64,16 +57,16 @@ export default class Cachos<T, K extends Error> {
 
 		if (!actualizacionExitosa) {
 			if (this.alFallar !== undefined) this.alFallar(error, this);
-			return Funci.fallo(error);
+			return fallo(error);
 		}
 
 		this._valor = valor;
-		return Funci.exito(valor);
+		return exito(valor);
 	}
 
-	public detener(): Funci.Resultado<null, ErrorAlDetenerElTemporizador> {
+	public detener(): Resultado<null, ErrorAlDetenerElTemporizador> {
 		if (this.temporizador === null)
-			return Funci.fallo(
+			return fallo(
 				new ErrorAlDetenerElTemporizador({
 					mensaje: "El temporizador no ha sido iniciado",
 				}),
@@ -81,11 +74,11 @@ export default class Cachos<T, K extends Error> {
 
 		clearInterval(this.temporizador);
 
-		return Funci.exito(null);
+		return exito(null);
 	}
 }
 
-export class ErrorAlIniciarElTemporizador extends Funci.ErrorBase {}
-export class ErrorAlDetenerElTemporizador extends Funci.ErrorBase {}
-export class ActualizacionFallida extends Funci.ErrorBase {}
-export class ValorNoInicializado extends Funci.ErrorBase {}
+export class ErrorAlIniciarElTemporizador extends ErrorBase {}
+export class ErrorAlDetenerElTemporizador extends ErrorBase {}
+export class ActualizacionFallida extends ErrorBase {}
+export class ValorNoInicializado extends ErrorBase {}

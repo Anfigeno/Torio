@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
 import registro from "@/configuracion/registro";
-import { Funci } from "@/lib/Funci";
+import { ErrorBase, intentar, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
-const saludo = Funci.usando(new Caracteristica("Saludo"), (c) => {
+const saludo = usando(new Caracteristica("Saludo"), (c) => {
 	const SALUDOS = ["Hola", "ola", "oa"];
 	const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
 
@@ -16,7 +16,7 @@ const saludo = Funci.usando(new Caracteristica("Saludo"), (c) => {
 			// biome-ignore lint/style/noNonNullAssertion: Esta controlado
 			RESPUESTAS_A_SALUDOS[Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)]!;
 
-		const { ok: seEnvioElMensaje, error } = await Funci.intentar({
+		const { ok: seEnvioElMensaje, error } = await intentar({
 			accion: () => mensaje.reply(saludo),
 			atrapar: (e) =>
 				new ErrorAlResponderPing({
@@ -31,4 +31,4 @@ const saludo = Funci.usando(new Caracteristica("Saludo"), (c) => {
 
 export default saludo;
 
-class ErrorAlResponderPing extends Funci.ErrorBase {}
+class ErrorAlResponderPing extends ErrorBase {}

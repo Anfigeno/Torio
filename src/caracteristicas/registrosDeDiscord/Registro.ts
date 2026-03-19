@@ -2,23 +2,23 @@ import { ContainerBuilder, type GuildTextBasedChannel, TextDisplayBuilder } from
 import type { ErrorAlObtenerCanal } from "@/caches";
 import registro from "@/configuracion/registro";
 import type Cachos from "@/lib/Cachos";
-import { Funci } from "@/lib/Funci";
+import { ErrorBase, exito, fallo, intentar, justo, nada, type Quiza, type Resultado } from "@/lib/Funci";
 
 export abstract class Registro {
 	protected abstract canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>;
 
-	protected abstract asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos>;
+	protected abstract asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos>;
 
-	private crearResumen(): Funci.Resultado<Funci.Quiza<ContainerBuilder>, ErrorAlCrearResumen> {
+	private crearResumen(): Resultado<Quiza<ContainerBuilder>, ErrorAlCrearResumen> {
 		const { ok: eventosAsignados, valor: quizaEventos, error } = this.asignarEventos();
-		if (!eventosAsignados) return Funci.fallo(new ErrorAlCrearResumen({ errorBase: error }));
+		if (!eventosAsignados) return fallo(new ErrorAlCrearResumen({ errorBase: error }));
 
 		const { existe: existenLosEventos, valor: eventos } = quizaEventos;
-		if (!existenLosEventos) return Funci.exito(Funci.nada());
+		if (!existenLosEventos) return exito(nada());
 
 		const resumen = new ContainerBuilder().addTextDisplayComponents(new TextDisplayBuilder().setContent(eventos.join("\n\n")));
 
-		return Funci.exito(Funci.justo(resumen));
+		return exito(justo(resumen));
 	}
 
 	public async registrar(): Promise<void> {
@@ -37,7 +37,7 @@ export abstract class Registro {
 		const { existe: existeElResumen, valor: resumen } = quizaResumen;
 		if (!existeElResumen) return;
 
-		const { ok: registroEnviado, error: errorAlEnviarElRegistro } = await Funci.intentar({
+		const { ok: registroEnviado, error: errorAlEnviarElRegistro } = await intentar({
 			accion: () =>
 				canal.send({
 					flags: ["IsComponentsV2"],
@@ -51,7 +51,7 @@ export abstract class Registro {
 	}
 }
 
-export class ErrorAlCrearResumen extends Funci.ErrorBase {}
-export class ErrorAlEnviarRegistro extends Funci.ErrorBase {}
-export class ErrorAlAsignarEventos extends Funci.ErrorBase {}
-export class SinEventosQueAsignar extends Funci.ErrorBase {}
+export class ErrorAlCrearResumen extends ErrorBase {}
+export class ErrorAlEnviarRegistro extends ErrorBase {}
+export class ErrorAlAsignarEventos extends ErrorBase {}
+export class SinEventosQueAsignar extends ErrorBase {}

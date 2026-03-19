@@ -10,11 +10,11 @@ import {
 	type User,
 } from "discord.js";
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
-import { Funci } from "@/lib/Funci";
+import { exito, fallo, justo, nada, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./Registro";
 
-const registrosDeCanalesDeTexto = Funci.usando(new Caracteristica("Registros de canales de texto"), (c) => {
+const registrosDeCanalesDeTexto = usando(new Caracteristica("Registros de canales de texto"), (c) => {
 	c.agregarManejadorDeEvento(Events.MessageUpdate, (...args) => new MensajeEditado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.MessageDelete, (...args) => new MensajeEliminado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.MessageReactionAdd, (...args) => new ReaccionAgregada(...args).registrar());
@@ -35,11 +35,11 @@ class MensajeEditado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		if (!this.mensajeAntiguo.content || !this.nuevoMensaje.content)
-			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }));
+			return fallo(new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }));
 		if (this.mensajeAntiguo.content === this.nuevoMensaje.content)
-			return Funci.fallo(new SinEventosQueAsignar({ mensaje: "El contenido no ha cambiado" }));
+			return fallo(new SinEventosQueAsignar({ mensaje: "El contenido no ha cambiado" }));
 
 		const eventos = [];
 		const usuario = this.mensajeAntiguo.member?.user || this.nuevoMensaje.member?.user;
@@ -52,8 +52,8 @@ ${codeBlock(this.nuevoMensaje.content)}
 en el canal ${this.nuevoMensaje.channel}. [Clic aquí para ver](${this.nuevoMensaje.url})
 `);
 
-		if (eventos.length === 0) return Funci.exito(Funci.nada());
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		if (eventos.length === 0) return exito(nada());
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -62,8 +62,8 @@ class MensajeEliminado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
-		if (!this.mensaje.content) return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (!this.mensaje.content) return fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
 		const eventos: string[] = [];
 
@@ -73,7 +73,7 @@ ${codeBlock(this.mensaje.content)}
 en el canal ${this.mensaje.channel}.
 `);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -86,9 +86,8 @@ class ReaccionAgregada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
-		if (!this.reaccion.message.content)
-			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (!this.reaccion.message.content) return fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
 		const eventos: string[] = [];
 
@@ -98,7 +97,7 @@ ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -111,9 +110,8 @@ class ReaccionEliminada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
-		if (!this.reaccion.message.content)
-			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (!this.reaccion.message.content) return fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
 		const eventos: string[] = [];
 
@@ -123,6 +121,6 @@ ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }

@@ -1,6 +1,6 @@
 import type { Client, ClientEvents } from "discord.js";
 import registro from "../configuracion/registro";
-import type { Funci } from "./Funci";
+import type { Ignorable } from "./Funci";
 
 export default class Torio {
 	constructor(public readonly cliente: Client) {}
@@ -20,9 +20,7 @@ export default class Torio {
 				this.cliente.on(manejadorDeEvento.evento, manejadorDeEvento.despachador);
 			}
 
-			registro.info(
-				`[${caracteristica.nombre}] cargó ${caracteristica.manejadoresDeEvento.length} manejadores de eventos`,
-			);
+			registro.info(`[${caracteristica.nombre}] cargó ${caracteristica.manejadoresDeEvento.length} manejadores de eventos`);
 		}
 
 		const manejadoresDeEventosCargados = this._caracteristicas.reduce(
@@ -35,8 +33,8 @@ export default class Torio {
 }
 
 export class Caracteristica {
-	private _manejadoresDeEvento: ManejadorDeEvento<Funci.Ignorable>[] = [];
-	public get manejadoresDeEvento(): ManejadorDeEvento<Funci.Ignorable>[] {
+	private _manejadoresDeEvento: ManejadorDeEvento<Ignorable>[] = [];
+	public get manejadoresDeEvento(): ManejadorDeEvento<Ignorable>[] {
 		return this._manejadoresDeEvento;
 	}
 

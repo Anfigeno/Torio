@@ -8,11 +8,11 @@ import {
 	type Role,
 } from "discord.js";
 import { canalDeRegistrosDeServidor } from "@/caches";
-import { Funci } from "@/lib/Funci";
+import { exito, justo, nada, Objeto, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { type ErrorAlAsignarEventos, Registro } from "./Registro";
 
-const registrosDeServidor = Funci.usando(new Caracteristica("Registros de servidor"), (c) => {
+const registrosDeServidor = usando(new Caracteristica("Registros de servidor"), (c) => {
 	c.agregarManejadorDeEvento(Events.ChannelCreate, (...args) => new CanalCreado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.ChannelDelete, (...args) => new CanalEliminado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.ChannelUpdate, (...args) => new CanalActualizado(...args).registrar());
@@ -64,14 +64,14 @@ class CanalCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(
 			`Se creó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -80,8 +80,8 @@ class CanalEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
-		if (this.canal.isDMBased()) return Funci.exito(Funci.nada());
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (this.canal.isDMBased()) return exito(nada());
 
 		const eventos: string[] = [];
 
@@ -89,7 +89,7 @@ class CanalEliminado extends RegistroDeServidor {
 			`Se eliminó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -101,8 +101,8 @@ class CanalActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
-		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased()) return Funci.exito(Funci.nada());
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased()) return exito(nada());
 
 		const eventos: string[] = [];
 
@@ -126,7 +126,7 @@ class CanalActualizado extends RegistroDeServidor {
 				`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoría ${this.canalAntiguo.parent}`,
 			);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -135,12 +135,12 @@ class RolCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`Se creó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -149,12 +149,12 @@ class RolEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`Se eliminó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }
 
@@ -166,7 +166,7 @@ class RolActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		if (this.rolAntiguo.name !== this.rolNuevo.name)
@@ -185,7 +185,7 @@ class RolActualizado extends RegistroDeServidor {
 
 			const constructorDeResumenDeDiferencias: string[] = [];
 
-			for (const [claveAntigua, valorAntiguo] of Funci.Objeto.entradas(permisosAntiguos)) {
+			for (const [claveAntigua, valorAntiguo] of Objeto.entradas(permisosAntiguos)) {
 				if (valorAntiguo !== permisosNuevos[claveAntigua]) {
 					constructorDeResumenDeDiferencias.push(
 						`- ${claveAntigua}: __${valorAntiguo ? "Sí" : "No"}__ -> **${permisosNuevos[claveAntigua] ? "Sí" : "No"}**`,
@@ -201,6 +201,6 @@ ${diferencias}
 `);
 		}
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }

@@ -1,10 +1,10 @@
 import { Events, type VoiceState } from "discord.js";
 import { canalDeRegistrosDeCanalesDeVoz } from "@/caches";
-import { Funci } from "@/lib/Funci";
+import { exito, fallo, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { ErrorAlAsignarEventos, Registro } from "./Registro";
 
-const registrosDeCanalesDeVoz = Funci.usando(new Caracteristica("Registros de canales de voz"), (c) => {
+const registrosDeCanalesDeVoz = usando(new Caracteristica("Registros de canales de voz"), (c) => {
 	c.agregarManejadorDeEvento(Events.VoiceStateUpdate, (...args) => new CambioDeEstado(...args).registrar());
 });
 
@@ -22,11 +22,11 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const usuario = this.estadoNuevo.member?.user || this.estadoAnterior.member?.user;
 
 		if (!usuario) {
-			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }));
+			return fallo(new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }));
 		}
 
 		const eventos: string[] = [];
@@ -73,6 +73,6 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 
 		if (this.estadoAnterior.streaming && !this.estadoNuevo.streaming) eventos.push(`${usuario} dejó de transmitir`);
 
-		return Funci.pipa(eventos, Funci.justo, Funci.exito);
+		return pipa(eventos, justo, exito);
 	}
 }

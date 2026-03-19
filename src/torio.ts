@@ -1,10 +1,10 @@
 import { Client, GatewayIntentBits } from "discord.js";
-import { Funci } from "./lib/Funci";
+import { con } from "./lib/Funci";
 import Torio from "./lib/Torio";
 
 const torio = new Torio(
 	new Client({
-		intents: Funci.con(GatewayIntentBits, (g) => [
+		intents: con(GatewayIntentBits, (g) => [
 			g.Guilds,
 			g.GuildMembers,
 			g.MessageContent,
