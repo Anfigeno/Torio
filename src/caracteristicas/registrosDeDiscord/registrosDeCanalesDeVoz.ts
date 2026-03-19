@@ -22,7 +22,7 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[], ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const usuario = this.estadoNuevo.member?.user || this.estadoAnterior.member?.user;
 
 		if (!usuario) {
@@ -38,9 +38,7 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 			eventos.push(`${usuario} se desconectó de ${this.estadoAnterior.channel}`);
 
 		if (this.estadoAnterior.channelId !== this.estadoNuevo.channelId)
-			eventos.push(
-				`${usuario} se desconectó de ${this.estadoAnterior.channel} y se conectó a ${this.estadoNuevo.channel}`,
-			);
+			eventos.push(`${usuario} se desconectó de ${this.estadoAnterior.channel} y se conectó a ${this.estadoNuevo.channel}`);
 
 		if (!this.estadoAnterior.selfMute && this.estadoNuevo.selfMute)
 			eventos.push(`${usuario} se muteó en ${this.estadoNuevo.channel}`);
@@ -60,8 +58,7 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 		if (this.estadoAnterior.selfVideo && !this.estadoNuevo.selfVideo)
 			eventos.push(`${usuario} desactivó su cámara en ${this.estadoNuevo.channel}`);
 
-		if (!this.estadoAnterior.serverMute && this.estadoNuevo.serverMute)
-			eventos.push(`${usuario} fue muteado por un moderador`);
+		if (!this.estadoAnterior.serverMute && this.estadoNuevo.serverMute) eventos.push(`${usuario} fue muteado por un moderador`);
 
 		if (this.estadoAnterior.serverMute && !this.estadoNuevo.serverMute)
 			eventos.push(`${usuario} fue desmuteado por un moderador`);
@@ -76,6 +73,6 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 
 		if (this.estadoAnterior.streaming && !this.estadoNuevo.streaming) eventos.push(`${usuario} dejó de transmitir`);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }

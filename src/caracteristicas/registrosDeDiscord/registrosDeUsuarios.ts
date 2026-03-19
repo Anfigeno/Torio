@@ -20,12 +20,12 @@ class MiembroSeUnio extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`${this.miembro} se unió al servidor`);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -34,12 +34,12 @@ class MiembroSeFue extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`${this.miembro} se fue del servidor`);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -51,7 +51,7 @@ class MiembroActualizado extends RegistroDeUsuario {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		Funci.con(this.miembroAntiguo.nickname, this.miembroNuevo.nickname, (apodoAntiguo, apodoNuevo) => {
@@ -117,6 +117,6 @@ class MiembroActualizado extends RegistroDeUsuario {
 				eventos.push(`${this.miembroNuevo} perdió los roles\n${constructorDeRolesEliminados.map((v) => `- ${v}`).join("\n")}`);
 		});
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }

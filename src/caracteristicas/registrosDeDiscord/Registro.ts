@@ -7,19 +7,18 @@ import { Funci } from "@/lib/Funci";
 export abstract class Registro {
 	protected abstract canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>;
 
-	protected abstract asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos>;
+	protected abstract asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos>;
 
-	private crearResumen(): Funci.Resultado<ContainerBuilder | null, ErrorAlCrearResumen> {
-		const { ok: eventosAsignados, valor: eventos, error } = this.asignarEventos();
+	private crearResumen(): Funci.Resultado<Funci.Quiza<ContainerBuilder>, ErrorAlCrearResumen> {
+		const { ok: eventosAsignados, valor: quizaEventos, error } = this.asignarEventos();
 		if (!eventosAsignados) return Funci.fallo(new ErrorAlCrearResumen({ errorBase: error }));
 
-		if (!eventos || eventos.length === 0) return Funci.exito(null);
+		const { existe: existenLosEventos, valor: eventos } = quizaEventos;
+		if (!existenLosEventos) return Funci.exito(Funci.nada());
 
-		const resumen = new ContainerBuilder().addTextDisplayComponents(
-			new TextDisplayBuilder().setContent(eventos.join("\n\n")),
-		);
+		const resumen = new ContainerBuilder().addTextDisplayComponents(new TextDisplayBuilder().setContent(eventos.join("\n\n")));
 
-		return Funci.exito(resumen);
+		return Funci.exito(Funci.justo(resumen));
 	}
 
 	public async registrar(): Promise<void> {
@@ -29,13 +28,14 @@ export abstract class Registro {
 			return;
 		}
 
-		const { ok: resumenCreado, valor: resumen, error: errorAlCrearElResumen } = this.crearResumen();
+		const { ok: resumenCreado, valor: quizaResumen, error: errorAlCrearElResumen } = this.crearResumen();
 		if (!resumenCreado) {
 			registro.error(errorAlCrearElResumen);
 			return;
 		}
 
-		if (!resumen) return;
+		const { existe: existeElResumen, valor: resumen } = quizaResumen;
+		if (!existeElResumen) return;
 
 		const { ok: registroEnviado, error: errorAlEnviarElRegistro } = await Funci.intentar({
 			accion: () =>

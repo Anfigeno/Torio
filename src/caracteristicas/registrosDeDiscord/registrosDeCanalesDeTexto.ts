@@ -35,7 +35,7 @@ class MensajeEditado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		if (!this.mensajeAntiguo.content || !this.nuevoMensaje.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }));
 		if (this.mensajeAntiguo.content === this.nuevoMensaje.content)
@@ -52,7 +52,8 @@ ${codeBlock(this.nuevoMensaje.content)}
 en el canal ${this.nuevoMensaje.channel}. [Clic aquí para ver](${this.nuevoMensaje.url})
 `);
 
-		return Funci.exito(eventos);
+		if (eventos.length === 0) return Funci.exito(Funci.nada());
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -61,9 +62,8 @@ class MensajeEliminado extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
-		if (!this.mensaje.content)
-			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (!this.mensaje.content) return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
 		const eventos: string[] = [];
 
@@ -73,7 +73,7 @@ ${codeBlock(this.mensaje.content)}
 en el canal ${this.mensaje.channel}.
 `);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -86,7 +86,7 @@ class ReaccionAgregada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		if (!this.reaccion.message.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
@@ -98,7 +98,7 @@ ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -111,7 +111,7 @@ class ReaccionEliminada extends RegistroDeCanalesDeTexto {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		if (!this.reaccion.message.content)
 			return Funci.fallo(new ErrorAlAsignarEventos({ mensaje: "El mensaje no tiene contenido?" }));
 
@@ -123,6 +123,6 @@ ${codeBlock(this.reaccion.message.content)}
 en el canal ${this.reaccion.message.channel}. [Clic aquí para ver](${this.reaccion.message.url})
 `);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }

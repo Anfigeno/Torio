@@ -10,7 +10,7 @@ import {
 import { canalDeRegistrosDeServidor } from "@/caches";
 import { Funci } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
-import { ErrorAlAsignarEventos, Registro } from "./Registro";
+import { type ErrorAlAsignarEventos, Registro } from "./Registro";
 
 const registrosDeServidor = Funci.usando(new Caracteristica("Registros de servidor"), (c) => {
 	c.agregarManejadorDeEvento(Events.ChannelCreate, (...args) => new CanalCreado(...args).registrar());
@@ -64,14 +64,14 @@ class CanalCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[], ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(
 			`Se creó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -80,8 +80,8 @@ class CanalEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
-		if (this.canal.isDMBased()) return Funci.exito(null);
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (this.canal.isDMBased()) return Funci.exito(Funci.nada());
 
 		const eventos: string[] = [];
 
@@ -89,7 +89,7 @@ class CanalEliminado extends RegistroDeServidor {
 			`Se eliminó el canal ${RegistroDeServidor.resumirCanal(this.canal)}, de tipo ${RegistroDeServidor.tipoDeCanal(this.canal.type)}.`,
 		);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -101,8 +101,8 @@ class CanalActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
-		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased()) return Funci.exito(null);
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
+		if (this.canalAntiguo.isDMBased() || this.canalNuevo.isDMBased()) return Funci.exito(Funci.nada());
 
 		const eventos: string[] = [];
 
@@ -126,7 +126,7 @@ class CanalActualizado extends RegistroDeServidor {
 				`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoría ${this.canalAntiguo.parent}`,
 			);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -135,12 +135,12 @@ class RolCreado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`Se creó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -149,12 +149,12 @@ class RolEliminado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		eventos.push(`Se eliminó el rol ${RegistroDeServidor.resumirRol(this.rol)}`);
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
 
@@ -166,7 +166,7 @@ class RolActualizado extends RegistroDeServidor {
 		super();
 	}
 
-	protected override asignarEventos(): Funci.Resultado<string[] | null, ErrorAlAsignarEventos> {
+	protected override asignarEventos(): Funci.Resultado<Funci.Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
 		if (this.rolAntiguo.name !== this.rolNuevo.name)
@@ -201,6 +201,6 @@ ${diferencias}
 `);
 		}
 
-		return Funci.exito(eventos);
+		return Funci.pipa(eventos, Funci.justo, Funci.exito);
 	}
 }
