@@ -2,13 +2,15 @@ export namespace Funci {
 	// biome-ignore lint/suspicious/noExplicitAny: Pa eso es
 	export type Ignorable = any;
 
-	export function con<T, K>(valor: T, fn: (v: T) => K): K {
-		return fn(valor);
-	}
-
 	export function usando<T>(valor: T, fn: (v: T) => unknown): T {
 		fn(valor);
 		return valor;
+	}
+
+	export function con<T extends unknown[], R>(...args: [...T, (...args2: T) => R]): R {
+		const fn = args.pop() as (...args: T) => R;
+		// biome-ignore lint/complexity/noBannedTypes: Sinceramente, no se ni por que esto esta mal
+		return (fn as Function)(...args);
 	}
 
 	export interface Pipa<T> {
