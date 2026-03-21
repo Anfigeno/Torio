@@ -4,6 +4,9 @@ const ConfiguracionDeDiscord = {
 			urlDeEspaciador: "https://i.postimg.cc/q7bKpt5N/expansor.png",
 		},
 	},
+	roles: {
+		moderador: "1050539602190024714",
+	},
 	canales: {
 		moderacion: {
 			registros: {

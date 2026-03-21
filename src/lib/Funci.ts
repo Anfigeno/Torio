@@ -118,15 +118,40 @@ export function nada(): Quiza<never> {
 	return { existe: false, valor: null };
 }
 
-export async function intentar<T, K extends Error>(cfg: {
-	accion: () => Promise<T>;
-	atrapar: (error: unknown) => K;
-}): Promise<Resultado<T, K>> {
+export function map<T, K>(fn: (valor: T) => K) {
+	return (quizaValor: Quiza<T>) => {
+		if (quizaValor.existe) return pipa(quizaValor.valor, fn, existe);
+		return quizaValor;
+	};
+}
+
+export function existe<T>(valor: T | null | undefined): Quiza<NonNullable<T>> {
+	if (valor === undefined || valor === null) return nada();
+	if (Array.isArray(valor) && valor.length === 0) return nada();
+	return justo(valor as NonNullable<T>);
+}
+
+type CfgIntentar<T, K> = { accion: () => T; atrapar: (error: unknown) => K; finalmente?: (error: K) => unknown };
+
+export function intentar<T, K extends Error>(cfg: CfgIntentar<Promise<T>, K>): Promise<Resultado<T, K>>;
+export function intentar<T, K extends Error>(cfg: CfgIntentar<T, K>): Resultado<T, K>;
+export function intentar<T, K extends Error>(cfg: CfgIntentar<T | Promise<T>, K>): Resultado<T, K> | Promise<Resultado<T, K>> {
 	try {
-		const datos = await cfg.accion();
+		const datos = cfg.accion();
+		if (datos instanceof Promise) {
+			return datos.then(exito).catch(e => {
+				const errorFinal = cfg.atrapar(e);
+
+				if (cfg.finalmente !== undefined) cfg.finalmente(errorFinal);
+
+				return fallo(errorFinal);
+			});
+		}
 		return exito(datos);
 	} catch (e) {
-		return fallo(cfg.atrapar(e));
+		const errorFinal = cfg.atrapar(e);
+		if (cfg.finalmente !== undefined) cfg.finalmente(errorFinal);
+		return fallo(errorFinal);
 	}
 }
 
@@ -148,5 +173,77 @@ export class ErrorBase extends Error {
 
 		this.errorBase = cfg?.errorBase;
 		this.name = this.constructor.name;
+	}
+}
+
+export namespace Arreglos {
+	export function map<T, K>(fn: (valor: T, indice: number) => K): (arreglo: T[]) => K[] {
+		return (arreglo: T[]) => {
+			const arregloFinal: K[] = [];
+
+			for (let i = 0; i < arreglo.length; i++) {
+				const valor = arreglo[i] as T;
+				arregloFinal.push(fn(valor, i));
+			}
+
+			return arregloFinal;
+		};
+	}
+
+	export function iterar<T>(fn: (valor: T, indice: number) => void): (arreglo: T[]) => void {
+		return (arreglo: T[]) => {
+			for (let i = 0; i < arreglo.length; i++) {
+				const valor = arreglo[i] as T;
+				fn(valor, i);
+			}
+		};
+	}
+
+	export function reducir<T, K>(valorInicial: K, fn: (acc: K, valor: T, indice: number) => K): (arreglo: T[]) => K {
+		return (arreglo: T[]) => {
+			for (let i = 0; i < arreglo.length; i++) {
+				const valor = arreglo[i] as T;
+				valorInicial = fn(valorInicial, valor, i);
+			}
+
+			return valorInicial;
+		};
+	}
+
+	export function filtrar<T, K extends T>(fn: (valor: T) => valor is K) {
+		return (arreglo: T[]) => {
+			const arregloFinal: K[] = [];
+
+			for (const valor of arreglo) {
+				if (fn(valor)) arregloFinal.push(valor);
+			}
+
+			return arregloFinal;
+		};
+	}
+
+	export type Anidado<T> = (T | Anidado<T>)[];
+
+	export function aplanar<T>(arreglo: Anidado<T>): T[] {
+		const arregloFinal: T[] = [];
+
+		for (const valor of arreglo) {
+			if (Array.isArray(valor)) {
+				arregloFinal.push(...aplanar(valor));
+				continue;
+			}
+
+			arregloFinal.push(valor);
+		}
+
+		return arregloFinal;
+	}
+
+	/**
+	 * @deprecated Usar `Funci.existe` en su lugar
+	 */
+	export function existe<T>(arreglo: T[]): Quiza<T[]> {
+		if (arreglo.length === 0) return nada();
+		return justo(arreglo);
 	}
 }

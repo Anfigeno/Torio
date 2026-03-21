@@ -7,6 +7,7 @@ import {
 	canalDeRegistrosDeUsuarios,
 } from "./caches.ts";
 import autenticado from "./caracteristicas/autenticado.ts";
+import { limpiar } from "./caracteristicas/moderacion/limpiar.ts";
 import ping from "./caracteristicas/ping.ts";
 import registrosDeCanalesDeTexto from "./caracteristicas/registrosDeDiscord/registrosDeCanalesDeTexto.ts";
 import registrosDeCanalesDeVoz from "./caracteristicas/registrosDeDiscord/registrosDeCanalesDeVoz.ts";
@@ -26,6 +27,7 @@ async function main() {
 		registrosDeCanalesDeVoz,
 		registrosDeServidor,
 		registrosDeUsuarios,
+		limpiar,
 	);
 
 	torio.establecerCaracteristicas();
@@ -51,4 +53,4 @@ async function iniciarCaches(): Promise<void> {
 	}
 }
 
-const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
+const esperar = (ms: number) => new Promise(resolver => setTimeout(resolver, ms));
