@@ -1,5 +1,5 @@
 import {
-	type Client,
+	Client,
 	type ClientEvents,
 	REST,
 	Routes,
@@ -7,89 +7,124 @@ import {
 	type SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 import registro from "../configuracion/registro";
-import { Arreglos, ErrorBase, existe, type Ignorable, intentar, justo, nada, pipa, type Quiza } from "./Funci";
+import { ErrorBase, exito, fallo, type Ignorable, intentar, justo, nada, type Quiza, type Resultado } from "./Funci";
 
 export default class Torio {
 	private readonly rest: REST;
+	private _cliente: Client;
 
-	constructor(public readonly cliente: Client) {
-		this.rest = new REST({ version: "10" }).setToken(process.env.CLAVE_DEL_BOT);
+	constructor(
+		public readonly claveDelBot: string,
+		public readonly idDelBot: string,
+		public readonly idDelServidor: string,
+	) {
+		this._cliente = new Client({ intents: [] });
+		this.rest = new REST({ version: "10" }).setToken(claveDelBot);
 	}
 
-	private _caracteristicas: Caracteristica[] = [];
+	public get cliente(): Client {
+		return this._cliente;
+	}
+
+	public establecerCliente(cliente: Client): void {
+		this._cliente = cliente;
+	}
+
+	public async iniciar(): Promise<Resultado<never, ErrorBase>> {
+		const { ok: seInicioElCliente, error: errorAlIniciarElCliente } = await intentar({
+			accion: () => this._cliente.login(this.claveDelBot),
+			atrapar: e => new ErrorBase({ mensaje: "No se pudo iniciar el cliente", errorBase: e }),
+		});
+
+		if (!seInicioElCliente) return fallo(errorAlIniciarElCliente);
+
+		return exito();
+	}
+
+	private _caracteristicas: Quiza<Caracteristica[]> = nada();
 
 	public agregarCaracteristicas(...caracteristicas: Caracteristica[]): void {
-		this._caracteristicas.push(...caracteristicas);
-	}
-
-	public establecerCaracteristicas(): void {
-		this.establecerManejadoresDeEventos();
-		this.establecerComandos();
-	}
-
-	private establecerManejadoresDeEventos(): void {
-		for (const caracteristica of this._caracteristicas) {
-			registro.info(`Cargando caracteristica [${caracteristica.nombre}]`);
-
-			if (caracteristica.manejadoresDeEvento.length === 0) continue;
-			for (const manejadorDeEvento of caracteristica.manejadoresDeEvento) {
-				this.cliente.on(manejadorDeEvento.evento, manejadorDeEvento.despachador);
-			}
-
-			registro.info(`[${caracteristica.nombre}] cargó ${caracteristica.manejadoresDeEvento.length} manejadores de eventos`);
+		if (!this._caracteristicas.existe) {
+			this._caracteristicas = justo(caracteristicas);
+			return;
 		}
 
-		const manejadoresDeEventosCargados: number = pipa(
-			this._caracteristicas,
-			Arreglos.reducir(0, (acc, caracteristica) => acc + caracteristica.manejadoresDeEvento.length),
-		);
+		this._caracteristicas.valor.push(...caracteristicas);
+	}
+
+	public establecerCaracteristicas(): Resultado<never, ErrorBase> {
+		const { existe: hayCaracteristicas, valor: caracteristicas } = this._caracteristicas;
+		if (!hayCaracteristicas) return fallo(new ErrorBase({ mensaje: "No hay caracteristicas" }));
+
+		this.establecerManejadoresDeEventos(caracteristicas);
+		this.establecerComandos(caracteristicas);
+
+		return exito();
+	}
+
+	private establecerManejadoresDeEventos(caracteristicas: Caracteristica[]): void {
+		let manejadoresDeEventosCargados = 0;
+
+		for (const caracteristica of caracteristicas) {
+			const { existe: hayManejadoresDeEvento, valor: manejadoresDeEvento } = caracteristica.manejadoresDeEvento;
+
+			if (!hayManejadoresDeEvento) continue;
+
+			manejadoresDeEventosCargados += manejadoresDeEvento.length;
+
+			for (const manejadorDeEvento of manejadoresDeEvento) {
+				this._cliente.on(manejadorDeEvento.evento, manejadorDeEvento.despachador);
+			}
+
+			registro.info(`[${caracteristica.nombre}] cargó ${manejadoresDeEvento.length} manejadores de eventos`);
+		}
+
+		if (manejadoresDeEventosCargados === 0) {
+			registro.info("No se cargaron manejadores de eventos");
+			return;
+		}
 
 		registro.info(`Se cargaron ${manejadoresDeEventosCargados} manejadores de evento en total`);
 	}
 
-	private async establecerComandos(): Promise<void> {
-		const { existe: hayComandos, valor: comandosYNombres } = pipa(
-			this._caracteristicas,
-			Arreglos.map(({ nombre, comandos }) => (comandos.existe ? { nombre, comandos: comandos.valor } : null)),
-			Arreglos.filtrar(c => c !== null),
-			existe,
-		);
+	private async establecerComandos(caracteristicas: Caracteristica[]): Promise<void> {
+		let comandosRegistrados = 0;
 
-		if (!hayComandos) return;
+		for (const { comandos: quizaComandos, nombre } of caracteristicas) {
+			const { existe: hayComandos, valor: comandos } = quizaComandos;
 
-		const { ok: comandosRegistrados, error } = await intentar({
-			accion: () =>
-				this.rest.put(Routes.applicationGuildCommands(process.env.ID_DEL_BOT, process.env.ID_DEL_SERVIDOR), {
-					body: pipa(
-						comandosYNombres,
-						Arreglos.map(cn => cn.comandos),
-						Arreglos.aplanar,
-					),
-				}),
-			atrapar: e => new ErrorAlRegistrarComando({ errorBase: e }),
-		});
+			if (!hayComandos) continue;
 
-		if (!comandosRegistrados) {
-			registro.fatal(error);
-			return;
-		}
+			comandosRegistrados += comandos.length;
 
-		for (const { nombre, comandos } of comandosYNombres) {
+			const { ok: seRegistraronLosComandos, error: errorAlRegistrarComandos } = await intentar({
+				accion: () =>
+					this.rest.put(Routes.applicationGuildCommands(this.idDelBot, this.idDelServidor), {
+						body: comandos,
+					}),
+				atrapar: e => new ErrorBase({ mensaje: `No se pudieron registrar los comandos de [${nombre}]`, errorBase: e }),
+			});
+
+			if (!seRegistraronLosComandos) {
+				registro.error(errorAlRegistrarComandos);
+				return;
+			}
+
 			registro.info(`[${nombre}] registró ${comandos.length} comandos`);
 		}
 
-		const cantidadTotalDeComandos = pipa(
-			comandosYNombres,
-			Arreglos.reducir(0, (acc, { comandos }) => acc + comandos.length),
-		);
+		if (comandosRegistrados === 0) {
+			registro.info("No se registroaron comandos");
+			return;
+		}
 
-		registro.info(`Se registraron ${cantidadTotalDeComandos} comando${cantidadTotalDeComandos > 1 ? "s" : ""} en total`);
+		registro.info(`Se registraron ${comandosRegistrados} comandos en total`);
 	}
 }
 
 export class Caracteristica {
-	private _manejadoresDeEvento: ManejadorDeEvento<Ignorable>[] = [];
-	public get manejadoresDeEvento(): ManejadorDeEvento<Ignorable>[] {
+	private _manejadoresDeEvento: Quiza<ManejadorDeEvento<Ignorable>[]> = nada();
+	public get manejadoresDeEvento(): Quiza<ManejadorDeEvento<Ignorable>[]> {
 		return this._manejadoresDeEvento;
 	}
 
@@ -104,7 +139,12 @@ export class Caracteristica {
 		evento: T,
 		despachador: (...args: ClientEvents[T]) => void,
 	): void {
-		this._manejadoresDeEvento.push({ evento, despachador });
+		if (!this._manejadoresDeEvento.existe) {
+			this._manejadoresDeEvento = justo([{ evento, despachador }]);
+			return;
+		}
+
+		this._manejadoresDeEvento.valor.push({ evento, despachador });
 	}
 
 	public agregarComando(comando: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder): void {
@@ -121,5 +161,3 @@ export type ManejadorDeEvento<T extends keyof ClientEvents> = {
 	evento: T;
 	despachador: (...args: ClientEvents[T]) => void;
 };
-
-class ErrorAlRegistrarComando extends ErrorBase {}

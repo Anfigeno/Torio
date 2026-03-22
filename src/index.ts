@@ -15,6 +15,7 @@ import registrosDeServidor from "./caracteristicas/registrosDeDiscord/registrosD
 import { registrosDeUsuarios } from "./caracteristicas/registrosDeDiscord/registrosDeUsuarios.ts";
 import saludo from "./caracteristicas/saludo.ts";
 import registro from "./configuracion/registro.ts";
+import { con } from "./lib/Funci.ts";
 import torio from "./torio.ts";
 
 main();
@@ -30,9 +31,20 @@ async function main() {
 		limpiar,
 	);
 
-	torio.establecerCaracteristicas();
+	con(torio.establecerCaracteristicas(), ({ ok, error }) => {
+		if (ok) return;
 
-	await torio.cliente.login(process.env.CLAVE_DEL_BOT);
+		registro.error(error);
+		process.exit(1);
+	});
+
+	con(await torio.iniciar(), ({ ok, error }) => {
+		if (ok) return;
+
+		registro.error(error);
+		process.exit(1);
+	});
+
 	await iniciarCaches();
 
 	registro.info("Bot listo!");

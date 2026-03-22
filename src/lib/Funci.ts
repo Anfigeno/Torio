@@ -201,12 +201,16 @@ export namespace Arreglos {
 
 	export function reducir<T, K>(valorInicial: K, fn: (acc: K, valor: T, indice: number) => K): (arreglo: T[]) => K {
 		return (arreglo: T[]) => {
-			for (let i = 0; i < arreglo.length; i++) {
-				const valor = arreglo[i] as T;
-				valorInicial = fn(valorInicial, valor, i);
-			}
+			let acumulador = valorInicial;
 
-			return valorInicial;
+			pipa(
+				arreglo,
+				Arreglos.iterar((valor, i) => {
+					acumulador = fn(acumulador, valor, i);
+				}),
+			);
+
+			return acumulador;
 		};
 	}
 
