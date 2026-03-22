@@ -243,6 +243,14 @@ export namespace Arreglos {
 		return arregloFinal;
 	}
 
+	export function algun<T>(fn: (valor: T) => boolean) {
+		return (arreglo: T[]) => {
+			for (const valor of arreglo) {
+				if (fn(valor)) return true;
+			}
+		};
+	}
+
 	/**
 	 * @deprecated Usar `Funci.existe` en su lugar
 	 */

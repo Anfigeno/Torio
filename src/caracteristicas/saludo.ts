@@ -1,26 +1,39 @@
 import { Events } from "discord.js";
 import registro from "@/configuracion/registro";
-import { ErrorBase, intentar, usando } from "@/lib/Funci";
+import { Arreglos, con, ErrorBase, intentar, pipa, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
-const saludo = usando(new Caracteristica("Saludo"), (c) => {
+export default usando(new Caracteristica("Saludo"), c => {
 	const SALUDOS = ["Hola", "ola", "oa"];
 	const RESPUESTAS_A_SALUDOS = ["Hola, causa", "oa", "Ahorita no", "¡Hola!", "no"];
 
-	c.agregarManejadorDeEvento(Events.MessageCreate, async (mensaje) => {
-		const autorEsBot = mensaje.author.bot;
-		const mensajeEsSaludo = SALUDOS.some((saludo) => mensaje.content.includes(saludo));
-		if (autorEsBot || !mensajeEsSaludo) return;
+	c.agregarManejadorDeEvento(Events.MessageCreate, async mensaje => {
+		if (mensaje.author.bot) return;
 
-		const saludo =
-			// biome-ignore lint/style/noNonNullAssertion: Esta controlado
-			RESPUESTAS_A_SALUDOS[Math.floor(Math.random() * RESPUESTAS_A_SALUDOS.length)]!;
+		const haySaludo = pipa(
+			SALUDOS,
+			Arreglos.algun(saludo =>
+				con(mensaje.content.toLowerCase(), contenido => {
+					return contenido === saludo || contenido.includes(`${saludo} `) || contenido.includes(` ${saludo} `);
+				}),
+			),
+		);
+
+		if (!haySaludo) return;
+
+		// biome-ignore lint/style/noNonNullAssertion: Esta controlado
+		const saludoAResponder = pipa(
+			RESPUESTAS_A_SALUDOS.length,
+			n => n * Math.random(),
+			Math.floor,
+			n => RESPUESTAS_A_SALUDOS[n],
+		)!;
 
 		const { ok: seEnvioElMensaje, error } = await intentar({
-			accion: () => mensaje.reply(saludo),
-			atrapar: (e) =>
-				new ErrorAlResponderPing({
-					mensaje: "No se pudo contestar a un saludo",
+			accion: () => mensaje.reply(saludoAResponder),
+			atrapar: e =>
+				new ErrorAlEjecutarSaludo({
+					mensaje: "No se pudo contestar",
 					errorBase: e,
 				}),
 		});
@@ -29,6 +42,4 @@ const saludo = usando(new Caracteristica("Saludo"), (c) => {
 	});
 });
 
-export default saludo;
-
-class ErrorAlResponderPing extends ErrorBase {}
+class ErrorAlEjecutarSaludo extends ErrorBase {}
