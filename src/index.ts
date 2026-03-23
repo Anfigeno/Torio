@@ -7,12 +7,12 @@ import {
 	canalDeRegistrosDeUsuarios,
 } from "./caches.ts";
 import autenticado from "./caracteristicas/autenticado.ts";
-import { limpiar } from "./caracteristicas/moderacion/limpiar.ts";
+import limpiar from "./caracteristicas/moderacion/limpiar.ts";
 import ping from "./caracteristicas/ping.ts";
 import registrosDeCanalesDeTexto from "./caracteristicas/registrosDeDiscord/registrosDeCanalesDeTexto.ts";
 import registrosDeCanalesDeVoz from "./caracteristicas/registrosDeDiscord/registrosDeCanalesDeVoz.ts";
 import registrosDeServidor from "./caracteristicas/registrosDeDiscord/registrosDeServidor.ts";
-import { registrosDeUsuarios } from "./caracteristicas/registrosDeDiscord/registrosDeUsuarios.ts";
+import registrosDeUsuarios from "./caracteristicas/registrosDeDiscord/registrosDeUsuarios.ts";
 import saludo from "./caracteristicas/saludo.ts";
 import registro from "./configuracion/registro.ts";
 import { con } from "./lib/Funci.ts";
