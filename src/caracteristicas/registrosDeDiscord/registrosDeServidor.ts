@@ -8,11 +8,11 @@ import {
 	type Role,
 } from "discord.js";
 import { canalDeRegistrosDeServidor } from "@/caches";
-import { exito, justo, nada, Objeto, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
+import { con, existe, exito, justo, nada, Objeto, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { type ErrorAlAsignarEventos, Registro } from "./Registro";
 
-const registrosDeServidor = usando(new Caracteristica("Registros de servidor"), (c) => {
+export default usando(new Caracteristica("Registros de servidor"), c => {
 	c.agregarManejadorDeEvento(Events.ChannelCreate, (...args) => new CanalCreado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.ChannelDelete, (...args) => new CanalEliminado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.ChannelUpdate, (...args) => new CanalActualizado(...args).registrar());
@@ -21,13 +21,11 @@ const registrosDeServidor = usando(new Caracteristica("Registros de servidor"), 
 	c.agregarManejadorDeEvento(Events.GuildRoleUpdate, (...args) => new RolActualizado(...args).registrar());
 });
 
-export default registrosDeServidor;
-
 abstract class RegistroDeServidor extends Registro {
 	protected override canalDeRegistros = canalDeRegistrosDeServidor;
 
-	protected static resumirCanal(canal: NonThreadGuildBasedChannel): string {
-		return `**${canal.name} - [${inlineCode(canal.id)}](${canal.url})**`;
+	protected static resumirCanal(canal: NonThreadGuildBasedChannel | DMChannel): string {
+		return `**${canal.toString()} ||[${inlineCode(canal.id)}](${canal.url})||**`;
 	}
 
 	protected static tipoDeCanal(tipo: ChannelType): string {
@@ -51,11 +49,11 @@ abstract class RegistroDeServidor extends Registro {
 	}
 
 	protected static resumirCategoria(categoria: CategoryChannel): string {
-		return `**${categoria} - ${inlineCode(categoria.id)}**`;
+		return `**${categoria.toString()} ||[${inlineCode(categoria.id)}](${categoria.url})||**`;
 	}
 
 	protected static resumirRol(rol: Role): string {
-		return `**${rol.name} - ${rol.id}**`;
+		return `**${rol.toString()} ||${inlineCode(rol.id)}||**`;
 	}
 }
 
@@ -111,20 +109,22 @@ class CanalActualizado extends RegistroDeServidor {
 				`Se actualizó el nombre del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${this.canalAntiguo.name} a ${this.canalNuevo.name}`,
 			);
 
-		if (!this.canalAntiguo.parent && this.canalNuevo.parent)
-			eventos.push(
-				`Se añadió el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} a la categoria ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
-			);
+		con(existe(this.canalAntiguo.parent), existe(this.canalNuevo.parent), (padreAntiguo, padreNuevo) => {
+			if (!padreAntiguo.existe && padreNuevo.existe)
+				eventos.push(
+					`Se añadió el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} a la categoria ${RegistroDeServidor.resumirCategoria(padreNuevo.valor)}`,
+				);
 
-		if (this.canalAntiguo.parent && this.canalNuevo.parent && this.canalAntiguo.parentId !== this.canalNuevo.parentId)
-			eventos.push(
-				`Se cambió la categoría del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${RegistroDeServidor.resumirCategoria(this.canalAntiguo.parent)} a ${RegistroDeServidor.resumirCategoria(this.canalNuevo.parent)}`,
-			);
+			if (padreAntiguo.existe && !padreNuevo.existe)
+				eventos.push(
+					`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoria ${RegistroDeServidor.resumirCategoria(padreAntiguo.valor)}`,
+				);
 
-		if (this.canalAntiguo.parent && !this.canalNuevo.parent)
-			eventos.push(
-				`Se quitó el canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)} de la categoría ${this.canalAntiguo.parent}`,
-			);
+			if (padreAntiguo.existe && padreNuevo.existe && padreAntiguo.valor.id !== padreNuevo.valor.id)
+				eventos.push(
+					`Se cambió la categoría del canal ${RegistroDeServidor.resumirCanal(this.canalAntiguo)}, de ${RegistroDeServidor.resumirCategoria(padreAntiguo.valor)} a ${RegistroDeServidor.resumirCategoria(padreNuevo.valor)}`,
+				);
+		});
 
 		return pipa(eventos, justo, exito);
 	}

@@ -12,16 +12,14 @@ import {
 import { canalDeRegistrosDeCanalesDeTexto } from "@/caches";
 import { exito, fallo, justo, nada, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
-import { ErrorAlAsignarEventos, Registro, SinEventosQueAsignar } from "./Registro";
+import { ErrorAlAsignarEventos, Registro } from "./Registro";
 
-const registrosDeCanalesDeTexto = usando(new Caracteristica("Registros de canales de texto"), (c) => {
+export default usando(new Caracteristica("Registros de canales de texto"), c => {
 	c.agregarManejadorDeEvento(Events.MessageUpdate, (...args) => new MensajeEditado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.MessageDelete, (...args) => new MensajeEliminado(...args).registrar());
 	c.agregarManejadorDeEvento(Events.MessageReactionAdd, (...args) => new ReaccionAgregada(...args).registrar());
 	c.agregarManejadorDeEvento(Events.MessageReactionRemove, (...args) => new ReaccionEliminada(...args).registrar());
 });
-
-export default registrosDeCanalesDeTexto;
 
 abstract class RegistroDeCanalesDeTexto extends Registro {
 	protected override canalDeRegistros = canalDeRegistrosDeCanalesDeTexto;
@@ -38,8 +36,7 @@ class MensajeEditado extends RegistroDeCanalesDeTexto {
 	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		if (!this.mensajeAntiguo.content || !this.nuevoMensaje.content)
 			return fallo(new ErrorAlAsignarEventos({ mensaje: "Uno de los mensajes no tiene contenido?" }));
-		if (this.mensajeAntiguo.content === this.nuevoMensaje.content)
-			return fallo(new SinEventosQueAsignar({ mensaje: "El contenido no ha cambiado" }));
+		if (this.mensajeAntiguo.content === this.nuevoMensaje.content) return exito(nada());
 
 		const eventos = [];
 		const usuario = this.mensajeAntiguo.member?.user || this.nuevoMensaje.member?.user;
@@ -52,7 +49,6 @@ ${codeBlock(this.nuevoMensaje.content)}
 en el canal ${this.nuevoMensaje.channel}. [Clic aquí para ver](${this.nuevoMensaje.url})
 `);
 
-		if (eventos.length === 0) return exito(nada());
 		return pipa(eventos, justo, exito);
 	}
 }

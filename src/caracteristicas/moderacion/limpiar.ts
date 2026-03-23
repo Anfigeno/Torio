@@ -1,6 +1,6 @@
 import { Events, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import registro from "@/configuracion/registro";
-import { Arreglos, con, ErrorBase, existe, intentar, map, pipa, usando } from "@/lib/Funci";
+import { Arreglos, con, ErrorBase, existe, intentar, mapearQuiza, pipa, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
 export const limpiar = usando(new Caracteristica("Limpiar"), c => {
@@ -76,7 +76,7 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 				pipa(
 					await canal.messages.fetch({ limit: cantidadDeMensajes }),
 					existe,
-					map(mensajes => mensajes.toJSON()),
+					mapearQuiza(mensajes => mensajes.toJSON()),
 				),
 			atrapar: e => new ErrorBase({ mensaje: "No se pudieron obtener los mensajes", errorBase: e }),
 		});

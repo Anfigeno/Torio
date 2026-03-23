@@ -108,6 +108,13 @@ export function fallo<K extends Error>(error: K): Resultado<never, K> {
 	return { ok: false, valor: null, error };
 }
 
+export function mapearResultado<T, K extends Error, U>(fn: (valor: T) => U) {
+	return (resultado: Resultado<T, K>) => {
+		if (resultado.ok) return pipa(resultado.valor, fn, exito);
+		return resultado;
+	};
+}
+
 export type Quiza<T> = { existe: true; valor: T } | { existe: false; valor: null };
 
 export function justo<T>(valor: T): Quiza<T> {
@@ -118,10 +125,10 @@ export function nada(): Quiza<never> {
 	return { existe: false, valor: null };
 }
 
-export function map<T, K>(fn: (valor: T) => K) {
-	return (quizaValor: Quiza<T>) => {
-		if (quizaValor.existe) return pipa(quizaValor.valor, fn, existe);
-		return quizaValor;
+export function mapearQuiza<T, K>(fn: (valor: T) => K): (quiza: Quiza<T>) => Quiza<NonNullable<K>> {
+	return (quiza: Quiza<T>) => {
+		if (quiza.existe) return pipa(quiza.valor, fn, existe);
+		return quiza;
 	};
 }
 
@@ -243,12 +250,17 @@ export namespace Arreglos {
 		return arregloFinal;
 	}
 
-	export function algun<T>(fn: (valor: T) => boolean) {
+	export function algun<T>(fn: (valor: T) => boolean): (arreglo: T[]) => boolean {
 		return (arreglo: T[]) => {
 			for (const valor of arreglo) {
 				if (fn(valor)) return true;
 			}
+			return false;
 		};
+	}
+
+	export function unir<T>(conector: string): (arreglo: T[]) => string {
+		return (arreglo: T[]) => arreglo.join(conector);
 	}
 
 	/**

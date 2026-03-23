@@ -1,14 +1,12 @@
-import { Events, type VoiceState } from "discord.js";
+import { channelMention, Events, type VoiceState } from "discord.js";
 import { canalDeRegistrosDeCanalesDeVoz } from "@/caches";
-import { exito, fallo, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
+import { con, existe, exito, fallo, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { ErrorAlAsignarEventos, Registro } from "./Registro";
 
-const registrosDeCanalesDeVoz = usando(new Caracteristica("Registros de canales de voz"), (c) => {
-	c.agregarManejadorDeEvento(Events.VoiceStateUpdate, (...args) => new CambioDeEstado(...args).registrar());
-});
-
-export default registrosDeCanalesDeVoz;
+export default usando(new Caracteristica("Registros de canales de voz"), c =>
+	c.agregarManejadorDeEvento(Events.VoiceStateUpdate, (...args) => new CambioDeEstado(...args).registrar()),
+);
 
 abstract class RegistroDeCanalesDeVoz extends Registro {
 	protected override canalDeRegistros = canalDeRegistrosDeCanalesDeVoz;
@@ -25,53 +23,64 @@ class CambioDeEstado extends RegistroDeCanalesDeVoz {
 	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const usuario = this.estadoNuevo.member?.user || this.estadoAnterior.member?.user;
 
-		if (!usuario) {
-			return fallo(new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }));
-		}
+		if (!usuario) return fallo(new ErrorAlAsignarEventos({ mensaje: "No se encontró el usuario" }));
 
 		const eventos: string[] = [];
 
-		if (!this.estadoAnterior.channelId && this.estadoNuevo.channelId)
-			eventos.push(`${usuario} se unió a ${this.estadoNuevo.channel}`);
+		con(existe(this.estadoAnterior.channelId), existe(this.estadoNuevo.channelId), (idDeCanalAnterior, idDeCanalNuevo) => {
+			if (!idDeCanalAnterior.existe && idDeCanalNuevo.existe)
+				eventos.push(`${usuario} se unió a ${channelMention(idDeCanalNuevo.valor)}`);
 
-		if (this.estadoAnterior.channelId && !this.estadoNuevo.channelId)
-			eventos.push(`${usuario} se desconectó de ${this.estadoAnterior.channel}`);
+			if (idDeCanalAnterior.existe && !idDeCanalNuevo.existe)
+				eventos.push(`${usuario} se desconectó de ${channelMention(idDeCanalAnterior.valor)}`);
 
-		if (this.estadoAnterior.channelId !== this.estadoNuevo.channelId)
-			eventos.push(`${usuario} se desconectó de ${this.estadoAnterior.channel} y se conectó a ${this.estadoNuevo.channel}`);
+			if (idDeCanalAnterior.existe && idDeCanalNuevo.existe && idDeCanalAnterior.valor !== idDeCanalNuevo.valor)
+				eventos.push(
+					`${usuario} se desconectó de ${channelMention(idDeCanalAnterior.valor)} y se conectó a ${channelMention(idDeCanalNuevo.valor)}`,
+				);
+		});
 
-		if (!this.estadoAnterior.selfMute && this.estadoNuevo.selfMute)
-			eventos.push(`${usuario} se muteó en ${this.estadoNuevo.channel}`);
+		con(existe(this.estadoAnterior.selfMute), existe(this.estadoNuevo.selfMute), (autoMuteAnterior, autoMuteNuevo) => {
+			if (!autoMuteAnterior.existe || !autoMuteNuevo.existe) return;
 
-		if (this.estadoAnterior.selfMute && !this.estadoNuevo.selfMute)
-			eventos.push(`${usuario} se desmuteó en ${this.estadoNuevo.channel}`);
+			if (!autoMuteAnterior.valor && autoMuteNuevo.valor) eventos.push(`${usuario} se muteó`);
+			if (autoMuteAnterior.valor && !autoMuteNuevo.valor) eventos.push(`${usuario} se desmuteó`);
+		});
 
-		if (!this.estadoAnterior.selfDeaf && this.estadoNuevo.selfDeaf)
-			eventos.push(`${usuario} se silenció en ${this.estadoNuevo.channel}`);
+		con(existe(this.estadoAnterior.selfDeaf), existe(this.estadoNuevo.selfDeaf), (autoSilencioAnterior, autoSilencioNuevo) => {
+			if (!autoSilencioAnterior.existe || !autoSilencioNuevo.existe) return;
 
-		if (this.estadoAnterior.selfDeaf && !this.estadoNuevo.selfDeaf)
-			eventos.push(`${usuario} se desilenció en ${this.estadoNuevo.channel}`);
+			if (!autoSilencioAnterior.valor && autoSilencioNuevo.valor) eventos.push(`${usuario} se silenció`);
+			if (autoSilencioAnterior.valor && !autoSilencioNuevo.valor) eventos.push(`${usuario} se desilenció`);
+		});
 
-		if (!this.estadoAnterior.selfVideo && this.estadoNuevo.selfVideo)
-			eventos.push(`${usuario} activó su cámara en ${this.estadoNuevo.channel}`);
+		con(existe(this.estadoAnterior.selfVideo), existe(this.estadoNuevo.selfVideo), (camaraAnterior, camaraNuevo) => {
+			if (!camaraAnterior.existe || !camaraNuevo.existe) return;
 
-		if (this.estadoAnterior.selfVideo && !this.estadoNuevo.selfVideo)
-			eventos.push(`${usuario} desactivó su cámara en ${this.estadoNuevo.channel}`);
+			if (!camaraAnterior.valor && camaraNuevo.valor) eventos.push(`${usuario} activó su cámara`);
+			if (camaraAnterior.valor && !camaraNuevo.valor) eventos.push(`${usuario} desactivó su cámara`);
+		});
 
-		if (!this.estadoAnterior.serverMute && this.estadoNuevo.serverMute) eventos.push(`${usuario} fue muteado por un moderador`);
+		con(existe(this.estadoAnterior.serverMute), existe(this.estadoNuevo.serverMute), (muteAnterior, muteNuevo) => {
+			if (!muteAnterior.existe || !muteNuevo.existe) return;
 
-		if (this.estadoAnterior.serverMute && !this.estadoNuevo.serverMute)
-			eventos.push(`${usuario} fue desmuteado por un moderador`);
+			if (!muteAnterior.valor && muteNuevo.valor) eventos.push(`${usuario} fue muteado`);
+			if (muteAnterior.valor && !muteNuevo.valor) eventos.push(`${usuario} fue desmuteado`);
+		});
 
-		if (!this.estadoAnterior.serverDeaf && this.estadoNuevo.serverDeaf)
-			eventos.push(`${usuario} fue silenciado por un moderador`);
+		con(existe(this.estadoAnterior.serverDeaf), existe(this.estadoNuevo.serverDeaf), (silencioAnterior, silencioNuevo) => {
+			if (!silencioAnterior.existe || !silencioNuevo.existe) return;
 
-		if (this.estadoAnterior.serverDeaf && !this.estadoNuevo.serverDeaf)
-			eventos.push(`${usuario} fue desilenciado por un moderador`);
+			if (!silencioAnterior.valor && silencioNuevo.valor) eventos.push(`${usuario} fue silenciado`);
+			if (silencioAnterior.valor && !silencioNuevo.valor) eventos.push(`${usuario} fue desilenciado`);
+		});
 
-		if (!this.estadoAnterior.streaming && this.estadoNuevo.streaming) eventos.push(`${usuario} comenzó a transmitir`);
+		con(existe(this.estadoAnterior.streaming), existe(this.estadoNuevo.streaming), (transmisionAnterior, transmisionNuevo) => {
+			if (!transmisionAnterior.existe || !transmisionNuevo.existe) return;
 
-		if (this.estadoAnterior.streaming && !this.estadoNuevo.streaming) eventos.push(`${usuario} dejó de transmitir`);
+			if (!transmisionAnterior.valor && transmisionNuevo.valor) eventos.push(`${usuario} comenzó a transmitir`);
+			if (transmisionAnterior.valor && !transmisionNuevo.valor) eventos.push(`${usuario} dejó de trasmitir`);
+		});
 
 		return pipa(eventos, justo, exito);
 	}

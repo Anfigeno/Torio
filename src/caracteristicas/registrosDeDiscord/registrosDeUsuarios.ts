@@ -1,11 +1,11 @@
-import { Events, type GuildMember, type GuildTextBasedChannel, inlineCode, type PartialGuildMember } from "discord.js";
+import { codeBlock, Events, type GuildMember, type GuildTextBasedChannel, inlineCode, type PartialGuildMember } from "discord.js";
 import { canalDeRegistrosDeUsuarios, type ErrorAlObtenerCanal } from "@/caches";
 import type Cachos from "@/lib/Cachos";
-import { con, exito, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
+import { Arreglos, con, existe, exito, justo, pipa, type Quiza, type Resultado, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 import { type ErrorAlAsignarEventos, Registro } from "./Registro";
 
-export const registrosDeUsuarios = usando(new Caracteristica("Registros de usuarios"), (c) => {
+export default usando(new Caracteristica("Registros de usuarios"), c => {
 	c.agregarManejadorDeEvento(Events.GuildMemberAdd, (...args) => new MiembroSeUnio(...args).registrar());
 	c.agregarManejadorDeEvento(Events.GuildMemberRemove, (...args) => new MiembroSeFue(...args).registrar());
 	c.agregarManejadorDeEvento(Events.GuildMemberUpdate, (...args) => new MiembroActualizado(...args).registrar());
@@ -54,40 +54,73 @@ class MiembroActualizado extends RegistroDeUsuario {
 	protected override asignarEventos(): Resultado<Quiza<string[]>, ErrorAlAsignarEventos> {
 		const eventos: string[] = [];
 
-		con(this.miembroAntiguo.nickname, this.miembroNuevo.nickname, (apodoAntiguo, apodoNuevo) => {
-			if (!apodoAntiguo && apodoNuevo) eventos.push(`${this.miembroNuevo} se puso el apodo ${inlineCode(apodoNuevo)}`);
-			if (apodoAntiguo && !apodoNuevo) eventos.push(`${this.miembroNuevo} se quitó el apodo`);
-			if (apodoAntiguo && apodoNuevo && apodoAntiguo !== apodoNuevo)
-				eventos.push(`${this.miembroNuevo} se cambió el apodo, de ${inlineCode(apodoAntiguo)} a ${inlineCode(apodoNuevo)}`);
+		con(existe(this.miembroAntiguo.nickname), existe(this.miembroNuevo.nickname), (apodoAntiguo, apodoNuevo) => {
+			if (!apodoAntiguo.existe && apodoNuevo.existe)
+				eventos.push(`${this.miembroNuevo} se puso el apodo ${inlineCode(apodoNuevo.valor)}`);
+
+			if (apodoAntiguo.existe && !apodoNuevo.existe) eventos.push(`${this.miembroNuevo} se quitó el apodo`);
+
+			if (apodoAntiguo.existe && apodoNuevo.existe && apodoAntiguo.valor !== apodoNuevo.valor)
+				eventos.push(
+					`${this.miembroNuevo} se cambió el apodo, de ${inlineCode(apodoAntiguo.valor)} a ${inlineCode(apodoNuevo.valor)}`,
+				);
 		});
 
-		con(this.miembroAntiguo.avatarURL(), this.miembroNuevo.avatarURL(), (avatarAntiguo, avatarNuevo) => {
-			if (!avatarAntiguo && avatarNuevo) eventos.push(`${this.miembroNuevo} se puso el avatar de servidor: ${avatarNuevo}`);
-			if (avatarAntiguo && !avatarNuevo) eventos.push(`${this.miembroNuevo} se quitó el avatar de servidor`);
-			if (avatarAntiguo && avatarNuevo && avatarAntiguo !== avatarNuevo)
-				eventos.push(`${this.miembroNuevo} se cambió el avatar de servidor, de ${avatarAntiguo} por ${avatarNuevo}`);
+		con(existe(this.miembroAntiguo.avatarURL()), existe(this.miembroNuevo.avatarURL()), (avatarAntiguo, avatarNuevo) => {
+			if (!avatarAntiguo.existe && avatarNuevo.existe)
+				eventos.push(`${this.miembroNuevo} se puso el avatar de servidor: ${inlineCode(avatarNuevo.valor)}`);
+
+			if (avatarAntiguo.existe && !avatarNuevo.existe) eventos.push(`${this.miembroNuevo} se quitó el avatar de servidor`);
+
+			if (avatarAntiguo.existe && avatarNuevo.existe && avatarAntiguo.valor !== avatarNuevo.valor)
+				eventos.push(
+					`${this.miembroNuevo} se cambió el avatar de servidor, de ${inlineCode(avatarAntiguo.valor)} por ${inlineCode(avatarNuevo.valor)}`,
+				);
 		});
 
-		con(this.miembroAntiguo.user.avatarURL(), this.miembroNuevo.user.avatarURL(), (avatarAntiguo, avatarNuevo) => {
-			if (!avatarAntiguo && avatarNuevo) eventos.push(`${this.miembroNuevo} se puso el avatar\n${avatarNuevo}`);
-			if (avatarAntiguo && !avatarNuevo) eventos.push(`${this.miembroNuevo} se quitó el avatar`);
-			if (avatarAntiguo && avatarNuevo && avatarAntiguo !== avatarNuevo)
-				eventos.push(`${this.miembroNuevo} se cambió el avatar, de\n${avatarAntiguo}\npor\n${avatarNuevo}`);
+		con(
+			existe(this.miembroAntiguo.user.avatarURL()),
+			existe(this.miembroNuevo.user.avatarURL()),
+			(avatarAntiguo, avatarNuevo) => {
+				if (!avatarAntiguo.existe && avatarNuevo.existe)
+					eventos.push(`${this.miembroNuevo} se puso el avatar ${inlineCode(avatarNuevo.valor)}`);
+
+				if (avatarAntiguo.existe && !avatarNuevo.existe) eventos.push(`${this.miembroNuevo} se quitó el avatar`);
+
+				if (avatarAntiguo.existe && avatarNuevo.existe && avatarAntiguo.valor !== avatarNuevo.valor)
+					eventos.push(
+						`${this.miembroNuevo} se cambió el avatar, de ${inlineCode(avatarAntiguo.valor)} por ${inlineCode(avatarNuevo.valor)}`,
+					);
+			},
+		);
+
+		con(existe(this.miembroAntiguo.bannerURL()), existe(this.miembroNuevo.bannerURL()), (cartelAntiguo, cartelNuevo) => {
+			if (!cartelAntiguo.existe && cartelNuevo.existe)
+				eventos.push(`${this.miembroNuevo} se puso el cartel de servidor ${inlineCode(cartelNuevo.valor)}`);
+
+			if (cartelAntiguo.existe && !cartelNuevo.existe) eventos.push(`${this.miembroNuevo} se quitó el cartel de servidor`);
+
+			if (cartelAntiguo.existe && cartelNuevo.existe && cartelAntiguo.valor !== cartelNuevo.valor)
+				eventos.push(
+					`${this.miembroNuevo} se cambió el cartel de servidor, de ${inlineCode(cartelAntiguo.valor)} por ${inlineCode(cartelNuevo.valor)}`,
+				);
 		});
 
-		con(this.miembroAntiguo.bannerURL(), this.miembroNuevo.bannerURL(), (cartelAntiguo, cartelNuevo) => {
-			if (!cartelAntiguo && cartelNuevo) eventos.push(`${this.miembroNuevo} se puso el cartel de servidor\n${cartelNuevo}`);
-			else if (cartelAntiguo && !cartelNuevo) eventos.push(`${this.miembroNuevo} se quitó el cartel de servidor`);
-			else if (cartelAntiguo !== cartelNuevo)
-				eventos.push(`${this.miembroNuevo} se cambió el cartel de servidor, de\n${cartelAntiguo}\npor\n${cartelNuevo}`);
-		});
+		con(
+			existe(this.miembroAntiguo.user.bannerURL()),
+			existe(this.miembroNuevo.user.bannerURL()),
+			(cartelAntiguo, cartelNuevo) => {
+				if (!cartelAntiguo.existe && cartelNuevo.existe)
+					eventos.push(`${this.miembroNuevo} se puso el cartel ${codeBlock(cartelNuevo.valor)}`);
 
-		con(this.miembroAntiguo.user.bannerURL(), this.miembroNuevo.user.bannerURL(), (cartelAntiguo, cartelNuevo) => {
-			if (!cartelAntiguo && cartelNuevo) eventos.push(`${this.miembroNuevo} se puso el cartel\n${cartelNuevo}`);
-			if (cartelAntiguo && !cartelNuevo) eventos.push(`${this.miembroNuevo} se quitó el cartel`);
-			if (cartelAntiguo && cartelNuevo && cartelAntiguo !== cartelNuevo)
-				eventos.push(`${this.miembroNuevo} se cambió el cartel, de\n${cartelAntiguo}\npor\n${cartelNuevo}`);
-		});
+				if (cartelAntiguo.existe && !cartelNuevo.existe) eventos.push(`${this.miembroNuevo} se quitó el cartel`);
+
+				if (cartelAntiguo.existe && cartelNuevo.existe && cartelAntiguo.valor !== cartelNuevo.valor)
+					eventos.push(
+						`${this.miembroNuevo} se cambió el cartel, de ${codeBlock(cartelAntiguo.valor)} por ${codeBlock(cartelNuevo.valor)}`,
+					);
+			},
+		);
 
 		con(this.miembroAntiguo.user.username, this.miembroNuevo.user.username, (nombreAntiguo, nombreNuevo) => {
 			if (nombreAntiguo !== nombreNuevo)
@@ -111,10 +144,22 @@ class MiembroActualizado extends RegistroDeUsuario {
 			}
 
 			if (constructorDeRolesAgregados.length !== 0)
-				eventos.push(`${this.miembroNuevo} obtuvo los roles\n${constructorDeRolesAgregados.map((v) => `- ${v}`).join("\n")}`);
+				eventos.push(
+					`${this.miembroNuevo} obtuvo los roles ${pipa(
+						constructorDeRolesAgregados,
+						Arreglos.map(s => `- ${s}`),
+						Arreglos.unir("\n"),
+					)}`,
+				);
 
 			if (constructorDeRolesEliminados.length !== 0)
-				eventos.push(`${this.miembroNuevo} perdió los roles\n${constructorDeRolesEliminados.map((v) => `- ${v}`).join("\n")}`);
+				eventos.push(
+					`${this.miembroNuevo} perdió los roles ${pipa(
+						constructorDeRolesEliminados,
+						Arreglos.map(s => `- ${s}`),
+						Arreglos.unir("\n"),
+					)}`,
+				);
 		});
 
 		return pipa(eventos, justo, exito);
