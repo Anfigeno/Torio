@@ -3,7 +3,7 @@ import registro from "@/configuracion/registro";
 import { Arreglos, con, ErrorBase, existe, intentar, mapearQuiza, pipa, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
-export const limpiar = usando(new Caracteristica("Limpiar"), c => {
+export default usando(new Caracteristica("Limpiar"), c => {
 	const COMANDO = {
 		nombre: "limpiar",
 		opciones: { cantidad: "cantidad-de-mensajes" },
@@ -31,7 +31,7 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 
 		const { ok: sePospusoLaRespuesta, error: errorAlPosponerLaRespuesta } = await intentar({
 			accion: () => interaccion.deferReply({ flags: ["Ephemeral"] }),
-			atrapar: e => new ErrorBase({ mensaje: "No se pudo posponer la respuesta", errorBase: e }),
+			atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudo posponer la respuesta", errorBase: e }),
 		});
 
 		if (!sePospusoLaRespuesta) {
@@ -42,28 +42,21 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 		const { existe: hayCanal, valor: canal } = existe(interaccion.channel);
 
 		if (!hayCanal) {
-			registro.error(new ErrorBase({ mensaje: "No hay canal" }));
+			registro.error(new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No hay canal" }));
 			return;
 		}
 
 		const {
 			ok: seObtuvoLaOpcion,
-			valor: quizaOpcionCantidad,
+			valor: cantidadDeMensajes,
 			error,
 		} = intentar({
-			accion: () => pipa(COMANDO.opciones.cantidad, c => interaccion.options.getNumber(c, true), existe),
-			atrapar: e => new ErrorBase({ mensaje: "No se pudo obtener la opcion", errorBase: e }),
+			accion: () => interaccion.options.getNumber(COMANDO.opciones.cantidad, true),
+			atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudo obtener la opcion", errorBase: e }),
 		});
 
 		if (!seObtuvoLaOpcion) {
 			registro.error(error);
-			return;
-		}
-
-		const { existe: hayOpcionCantidad, valor: cantidadDeMensajes } = quizaOpcionCantidad;
-
-		if (!hayOpcionCantidad) {
-			registro.error(new ErrorBase({ mensaje: "No hay la opción cantidad" }));
 			return;
 		}
 
@@ -78,7 +71,7 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 					existe,
 					mapearQuiza(mensajes => mensajes.toJSON()),
 				),
-			atrapar: e => new ErrorBase({ mensaje: "No se pudieron obtener los mensajes", errorBase: e }),
+			atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudieron obtener los mensajes", errorBase: e }),
 		});
 
 		if (!seObtuvieronLosMensajes) {
@@ -89,7 +82,7 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 		const { existe: hayMensajes, valor: mensajes } = quizaMensajes;
 
 		if (!hayMensajes) {
-			registro.error(new ErrorBase({ mensaje: "No hay mensajes" }));
+			registro.error(new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No hay mensajes" }));
 			return;
 		}
 
@@ -98,7 +91,7 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 			Arreglos.map(mensaje =>
 				intentar({
 					accion: () => mensaje.delete(),
-					atrapar: e => new ErrorBase({ mensaje: "No se pudo eliminar un mensaje", errorBase: e }),
+					atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudo eliminar un mensaje", errorBase: e }),
 				}),
 			),
 			p => Promise.all(p),
@@ -127,9 +120,11 @@ export const limpiar = usando(new Caracteristica("Limpiar"), c => {
 
 		const { ok: seRespondio, error: errorAlResponder } = await intentar({
 			accion: () => interaccion.editReply(respuesta),
-			atrapar: e => new ErrorBase({ mensaje: "No se pudo responder la interaccion", errorBase: e }),
+			atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudo responder la interaccion", errorBase: e }),
 		});
 
 		if (!seRespondio) registro.error(errorAlResponder);
 	});
 });
+
+class ErrorAlEjecutarCaracteristicaLimpiar extends ErrorBase {}
