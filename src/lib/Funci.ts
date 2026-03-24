@@ -134,7 +134,6 @@ export function mapearQuiza<T, K>(fn: (valor: T) => K): (quiza: Quiza<T>) => Qui
 
 export function existe<T>(valor: T | null | undefined): Quiza<NonNullable<T>> {
 	if (valor === undefined || valor === null) return nada();
-	if (Array.isArray(valor) && valor.length === 0) return nada();
 	return justo(valor as NonNullable<T>);
 }
 
@@ -261,13 +260,5 @@ export namespace Arreglos {
 
 	export function unir<T>(conector: string): (arreglo: T[]) => string {
 		return (arreglo: T[]) => arreglo.join(conector);
-	}
-
-	/**
-	 * @deprecated Usar `Funci.existe` en su lugar
-	 */
-	export function existe<T>(arreglo: T[]): Quiza<T[]> {
-		if (arreglo.length === 0) return nada();
-		return justo(arreglo);
 	}
 }

@@ -65,10 +65,8 @@ export default class Torio {
 	private establecerManejadoresDeEventos(caracteristicas: Caracteristica[]): void {
 		let manejadoresDeEventosCargados = 0;
 
-		for (const caracteristica of caracteristicas) {
-			const { existe: hayManejadoresDeEvento, valor: manejadoresDeEvento } = caracteristica.manejadoresDeEvento;
-
-			if (!hayManejadoresDeEvento) continue;
+		for (const { nombre, manejadoresDeEvento } of caracteristicas) {
+			if (manejadoresDeEvento.length === 0) continue;
 
 			manejadoresDeEventosCargados += manejadoresDeEvento.length;
 
@@ -76,7 +74,7 @@ export default class Torio {
 				this._cliente.on(manejadorDeEvento.evento, manejadorDeEvento.despachador);
 			}
 
-			registro.info(`[${caracteristica.nombre}] cargó ${manejadoresDeEvento.length} manejadores de eventos`);
+			registro.info(`[${nombre}] cargó ${manejadoresDeEvento.length} manejadores de eventos`);
 		}
 
 		if (manejadoresDeEventosCargados === 0) {
@@ -90,10 +88,8 @@ export default class Torio {
 	private async establecerComandos(caracteristicas: Caracteristica[]): Promise<void> {
 		let comandosRegistrados = 0;
 
-		for (const { comandos: quizaComandos, nombre } of caracteristicas) {
-			const { existe: hayComandos, valor: comandos } = quizaComandos;
-
-			if (!hayComandos) continue;
+		for (const { comandos, nombre } of caracteristicas) {
+			if (comandos.length === 0) continue;
 
 			comandosRegistrados += comandos.length;
 
@@ -123,13 +119,13 @@ export default class Torio {
 }
 
 export class Caracteristica {
-	private _manejadoresDeEvento: Quiza<ManejadorDeEvento<Ignorable>[]> = nada();
-	public get manejadoresDeEvento(): Quiza<ManejadorDeEvento<Ignorable>[]> {
+	private _manejadoresDeEvento: ManejadorDeEvento<Ignorable>[] = [];
+	public get manejadoresDeEvento(): ManejadorDeEvento<Ignorable>[] {
 		return this._manejadoresDeEvento;
 	}
 
-	private _comandos: Quiza<(SlashCommandBuilder | SlashCommandOptionsOnlyBuilder)[]> = nada();
-	public get comandos(): Quiza<(SlashCommandBuilder | SlashCommandOptionsOnlyBuilder)[]> {
+	private _comandos: (SlashCommandBuilder | SlashCommandOptionsOnlyBuilder)[] = [];
+	public get comandos(): (SlashCommandBuilder | SlashCommandOptionsOnlyBuilder)[] {
 		return this._comandos;
 	}
 
@@ -139,21 +135,11 @@ export class Caracteristica {
 		evento: T,
 		despachador: (...args: ClientEvents[T]) => void,
 	): void {
-		if (!this._manejadoresDeEvento.existe) {
-			this._manejadoresDeEvento = justo([{ evento, despachador }]);
-			return;
-		}
-
-		this._manejadoresDeEvento.valor.push({ evento, despachador });
+		this._manejadoresDeEvento.push({ evento, despachador });
 	}
 
 	public agregarComando(comando: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder): void {
-		if (!this._comandos.existe) {
-			this._comandos = justo([comando]);
-			return;
-		}
-
-		this._comandos.valor.push(comando);
+		this._comandos.push(comando);
 	}
 }
 

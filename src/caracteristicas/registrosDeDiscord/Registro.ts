@@ -2,7 +2,7 @@ import { ContainerBuilder, type GuildTextBasedChannel, TextDisplayBuilder } from
 import type { ErrorAlObtenerCanal } from "@/caches";
 import registro from "@/configuracion/registro";
 import type Cachos from "@/lib/Cachos";
-import { ErrorBase, existe, exito, fallo, intentar, justo, nada, pipa, type Quiza, type Resultado } from "@/lib/Funci";
+import { ErrorBase, exito, fallo, intentar, justo, nada, pipa, type Quiza, type Resultado } from "@/lib/Funci";
 
 export abstract class Registro {
 	protected abstract canalDeRegistros: Cachos<GuildTextBasedChannel, ErrorAlObtenerCanal>;
@@ -14,11 +14,10 @@ export abstract class Registro {
 
 		if (!eventosAsignados) return fallo(new ErrorAlCrearRegistro({ errorBase: errorAlAsignarEventos }));
 
-		const { existe: existenLosEventos, valor: listaDeEventos } = quizaEventos;
+		const { existe: existenLosEventos, valor: eventos } = quizaEventos;
 		if (!existenLosEventos) return exito(nada());
 
-		const { existe: hayEventos, valor: eventos } = existe(listaDeEventos);
-		if (!hayEventos) return exito(nada());
+		if (eventos.length === 0) return exito(nada());
 
 		const resumen = new ContainerBuilder().addTextDisplayComponents(new TextDisplayBuilder().setContent(eventos.join("\n\n")));
 

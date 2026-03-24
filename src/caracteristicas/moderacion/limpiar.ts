@@ -1,6 +1,6 @@
 import { Events, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import registro from "@/configuracion/registro";
-import { Arreglos, con, ErrorBase, existe, intentar, mapearQuiza, pipa, usando } from "@/lib/Funci";
+import { Arreglos, con, ErrorBase, existe, intentar, pipa, usando } from "@/lib/Funci";
 import { Caracteristica } from "@/lib/Torio";
 
 export default usando(new Caracteristica("Limpiar"), c => {
@@ -62,15 +62,10 @@ export default usando(new Caracteristica("Limpiar"), c => {
 
 		const {
 			ok: seObtuvieronLosMensajes,
-			valor: quizaMensajes,
+			valor: mensajes,
 			error: errorAlObtenerMensajes,
 		} = await intentar({
-			accion: async () =>
-				pipa(
-					await canal.messages.fetch({ limit: cantidadDeMensajes }),
-					existe,
-					mapearQuiza(mensajes => mensajes.toJSON()),
-				),
+			accion: async () => pipa(await canal.messages.fetch({ limit: cantidadDeMensajes }), mensajes => mensajes.toJSON()),
 			atrapar: e => new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No se pudieron obtener los mensajes", errorBase: e }),
 		});
 
@@ -79,14 +74,7 @@ export default usando(new Caracteristica("Limpiar"), c => {
 			return;
 		}
 
-		const { existe: hayMensajes, valor: mensajes } = quizaMensajes;
-
-		if (!hayMensajes) {
-			registro.error(new ErrorAlEjecutarCaracteristicaLimpiar({ mensaje: "No hay mensajes" }));
-			return;
-		}
-
-		const { existe: hayErroresAlEliminarMensajes, valor: erroresAlEliminarMensajes } = await pipa(
+		const erroresAlEliminarMensajes = await pipa(
 			mensajes,
 			Arreglos.map(mensaje =>
 				intentar({
@@ -101,22 +89,20 @@ export default usando(new Caracteristica("Limpiar"), c => {
 						resultados,
 						Arreglos.filtrar(resultado => !resultado.ok),
 						Arreglos.map(resultado => resultado.error),
-						existe,
 					),
 				),
 		);
 
 		let respuesta: string;
 
-		if (hayErroresAlEliminarMensajes) {
+		if (erroresAlEliminarMensajes.length === 0) {
 			for (const error of erroresAlEliminarMensajes) {
 				registro.error(error);
 			}
 
 			respuesta = "Ocurrió un error al ejecutar este comando. Por favor, avisa a un administrador lo más pronto posible.";
-		}
-
-		respuesta = `Se ${cantidadDeMensajes === 1 ? `eliminó 1 mensaje` : `eliminaron ${cantidadDeMensajes} mensajes`} en ${(Date.now() - inicioDelComando) / 1000} segundos`;
+		} else
+			respuesta = `Se ${cantidadDeMensajes === 1 ? `eliminó 1 mensaje` : `eliminaron ${cantidadDeMensajes} mensajes`} en ${(Date.now() - inicioDelComando) / 1000} segundos`;
 
 		const { ok: seRespondio, error: errorAlResponder } = await intentar({
 			accion: () => interaccion.editReply(respuesta),
